@@ -205,9 +205,9 @@
         const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
         const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
 
-        async function loadContent() {
+        async function loadContent(forceRefresh = false) {
             if (state.timers.slide) clearTimeout(state.timers.slide);
-            showMessage("Refreshing feeds...", true);
+            showMessage(forceRefresh ? "Fetching fresh feeds..." : "Refreshing feeds...", true);
             
             let pool = [];
 
@@ -215,8 +215,8 @@
                 const cacheKey = `reddit_img_cache_${sub}`;
                 const cached = localStorage.getItem(cacheKey);
 
-                // 1. Use localStorage cache if less than 30 minutes old
-                if (cached) {
+                // 1. Use localStorage cache if less than 30 minutes old (unless forceRefresh is true)
+                if (!forceRefresh && cached) {
                     const { timestamp, items } = JSON.parse(cached);
                     if (Date.now() - timestamp < CACHE_TTL) {
                         pool.push(...items);
@@ -226,7 +226,7 @@
 
                 // 2. Fetch through your Netlify rss-proxy function
                 try {
-                    const rssUrl = `https://www.reddit.com/r/${sub}/.rss`;
+                    const rssUrl = `https://reddit.com{sub}/.rss`;
                     const res = await fetch(`/.netlify/functions/rss-proxy?url=${encodeURIComponent(rssUrl)}`);
                     
                     if (!res.ok) throw new Error(`HTTP ${res.status}`);
@@ -240,7 +240,7 @@
 
                         // Check for a standard direct i.redd.it image link
                         const directMatch = html.match(/href="([^"]*i\.redd\.it\/[^"]*\.(jpg|jpeg|png))"/i);
-                        if (directMatch) {
+                        if (directMatch && directMatch[1]) {
                             imgUrl = directMatch[1];
                         } 
                         // Otherwise, check for a Reddit gallery post and extract its cover image
@@ -250,7 +250,6 @@
                             const rawUrl = thumbUrl || (previewMatch ? previewMatch[1] : null);
 
                             if (rawUrl) {
-                                // Decode HTML entities (&amp; -> &) so the preview URL loads properly
                                 imgUrl = rawUrl.replace(/&amp;/g, '&');
                             }
                         }
@@ -266,15 +265,21 @@
                         } : null;
                     }).filter(Boolean);
 
-                    localStorage.setItem(cacheKey, JSON.stringify({
-                        timestamp: Date.now(),
-                        items
-                    }));
+                    if (items.length > 0) {
+                        localStorage.setItem(cacheKey, JSON.stringify({
+                            timestamp: Date.now(),
+                            items
+                        }));
+                        pool.push(...items);
+                    } else if (cached) {
+                        // Keep previous cache if the new fetch returned 0 valid items
+                        pool.push(...JSON.parse(cached).items);
+                    }
 
-                    pool.push(...items);
-                    await delay(300);
+                    await delay(600);
                 } catch (e) {
                     console.warn(`Failed to fetch r/${sub}:`, e);
+                    // Safe fallback: restore previous cached items if Reddit rate-limits the refresh
                     if (cached) {
                         pool.push(...JSON.parse(cached).items);
                     }
@@ -292,6 +297,12 @@
                 showMessage("Feed unavailable. Check connection.", true);
             }
         }
+
+        function clearCacheAndRefresh() {
+            loadContent(true);
+        }
+
+        document.getElementById('clearCacheBtn')?.addEventListener('click', clearCacheAndRefresh);
 
 //###########################################################################################
 
@@ -374,20 +385,6 @@
                 }, 3000);
             };
         }
-
-	function clearCacheAndRefresh() {
-    	// loop through all keys in localStorage and remove only your subreddit caches
-    		Object.keys(localStorage).forEach(key => {
-        	if (key.startsWith('reddit_img_cache_')) {
-        	    localStorage.removeItem(key);
-        	}
-    	});
-
-    	showMessage("Cache cleared. Fetching fresh feeds...", true);
-    	loadContent();
-	}
-
-	document.getElementById('clearCacheBtn')?.addEventListener('click', clearCacheAndRefresh);
 
         init();
     </script>
