@@ -108,6 +108,9 @@
     <div id="message-overlay">Connecting...</div>
 
     <div id="controls">
+         <button id="clearCacheBtn" type="button" title="Clear cached images and fetch fresh feeds">
+ 	   Clear Cache &amp; Refresh
+	 </button>
         <div class="control-group">
             <label>Slide Duration</label>
             <input type="range" id="timeSlider" min="5" max="300" value="15">
@@ -221,7 +224,7 @@
                     }
                 }
 
-                // 2. Use your existing, already-deployed rss-proxy function
+                // 2. Fetch through your Netlify rss-proxy function
                 try {
                     const rssUrl = `https://www.reddit.com/r/${sub}/.rss`;
                     const res = await fetch(`/.netlify/functions/rss-proxy?url=${encodeURIComponent(rssUrl)}`);
@@ -233,9 +236,27 @@
 
                     const items = (data.items || []).map(item => {
                         const html = item.content || item.description || "";
-                        const match = html.match(/href="([^"]*i\.redd\.it\/[^"]*\.(jpg|jpeg|png))"/i);
-                        return match ? {
-                            url: match[1],
+                        let imgUrl = null;
+
+                        // Check for a standard direct i.redd.it image link
+                        const directMatch = html.match(/href="([^"]*i\.redd\.it\/[^"]*\.(jpg|jpeg|png))"/i);
+                        if (directMatch) {
+                            imgUrl = directMatch[1];
+                        } 
+                        // Otherwise, check for a Reddit gallery post and extract its cover image
+                        else if (item.link && item.link.includes('/gallery/')) {
+                            const thumbUrl = item.mediaThumbnail?.$?.url || item.mediaContent?.$?.url;
+                            const previewMatch = html.match(/src="([^"]*preview\.redd\.it\/[^"]*)"/i);
+                            const rawUrl = thumbUrl || (previewMatch ? previewMatch[1] : null);
+
+                            if (rawUrl) {
+                                // Decode HTML entities (&amp; -> &) so the preview URL loads properly
+                                imgUrl = rawUrl.replace(/&amp;/g, '&');
+                            }
+                        }
+
+                        return imgUrl ? {
+                            url: imgUrl,
                             sub: sub,
                             date: new Date(item.pubDate || item.isoDate).toLocaleDateString(undefined, {
                                 year: 'numeric',
@@ -353,6 +374,21 @@
                 }, 3000);
             };
         }
+
+	function clearCacheAndRefresh() {
+    	// loop through all keys in localStorage and remove only your subreddit caches
+    		Object.keys(localStorage).forEach(key => {
+        	if (key.startsWith('reddit_img_cache_')) {
+        	    localStorage.removeItem(key);
+        	}
+    	});
+
+    	showMessage("Cache cleared. Fetching fresh feeds...", true);
+    	loadContent();
+	}
+
+	document.getElementById('clearCacheBtn')?.addEventListener('click', clearCacheAndRefresh);
+
         init();
     </script>
 </body>
