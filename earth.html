@@ -230,8 +230,8 @@
                 try {
                     // Use backticks (`) and ${sub} so the subreddit name is inserted properly
                     const rssUrl = `https://www.reddit.com/r/${sub}/.rss`;
-                    const res = await fetch(`/.netlify/functions/rss-proxy?url=${encodeURIComponent(rssUrl)}`);
-                    
+                    const res = await fetch(`/.netlify/functions/rss-proxy?raw=1&url=${encodeURIComponent(rssUrl)}`);
+
                     if (!res.ok) throw new Error(`HTTP ${res.status}`);
                     
                     const xmlText = await res.text();
