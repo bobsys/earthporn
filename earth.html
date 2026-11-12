@@ -228,43 +228,48 @@
                 }
 
                 try {
-                    const rssUrl = `https://reddit.com{sub}/.rss`;
+                    // Use backticks (`) and ${sub} so the subreddit name is inserted properly
+                    const rssUrl = `https://www.reddit.com/r/${sub}/.rss`;
                     const res = await fetch(`/.netlify/functions/rss-proxy?url=${encodeURIComponent(rssUrl)}`);
                     
                     if (!res.ok) throw new Error(`HTTP ${res.status}`);
                     
-                    const json = await res.json();
-                    if (json.error) throw new Error(json.details || json.error);
-
-                    const posts = json?.data?.children || [];
+                    const xmlText = await res.text();
+                    const xmlDoc = new DOMParser().parseFromString(xmlText, "text/xml");
+                    const entries = Array.from(xmlDoc.querySelectorAll("entry"));
                     const items = [];
 
-                    posts.forEach(post => {
-                        const d = post.data;
-                        if (!d || d.over_18) return;
+                    entries.forEach(entry => {
+                        const contentHtml = entry.querySelector("content")?.textContent || "";
+                        const linkHref = entry.querySelector("link")?.getAttribute("href") || "";
+                        const updated = entry.querySelector("updated")?.textContent || "";
+                        let imgUrl = null;
 
-                        const dateStr = new Date(d.created_utc * 1000).toLocaleDateString(undefined, {
-                            year: 'numeric',
-                            month: 'short',
-                            day: 'numeric'
-                        });
-
-                        // 1. Standard direct i.redd.it image
-                        if (d.url && /\.(jpg|jpeg|png)$/i.test(d.url) && d.url.includes('i.redd.it')) {
-                            items.push({ url: d.url, sub, date: dateStr });
+                        // 1. Standard direct i.redd.it image link
+                        const directMatch = contentHtml.match(/href="([^"]*i\.redd\.it\/[^"]*\.(jpg|jpeg|png))"/i);
+                        if (directMatch && directMatch[1]) {
+                            imgUrl = directMatch[1];
                         } 
-                        // 2. Reddit Gallery post (extracts the first gallery image cleanly)
-                        else if (d.is_gallery && d.media_metadata) {
-                            const firstId = d.gallery_data?.items?.[0]?.media_id || Object.keys(d.media_metadata)[0];
-                            const media = d.media_metadata[firstId];
-                            const rawUrl = media?.s?.u || media?.s?.gif;
+                        // 2. Reddit gallery post cover image
+                        else if (linkHref.includes('/gallery/')) {
+                            const thumb = entry.getElementsByTagNameNS("*", "thumbnail")[0]?.getAttribute("url");
+                            const previewMatch = contentHtml.match(/src="([^"]*preview\.redd\.it\/[^"]*)"/i);
+                            const rawUrl = thumb || (previewMatch ? previewMatch[1] : null);
                             if (rawUrl) {
-                                items.push({
-                                    url: rawUrl.replace(/&amp;/g, '&'),
-                                    sub,
-                                    date: dateStr
-                                });
+                                imgUrl = rawUrl.replace(/&amp;/g, '&');
                             }
+                        }
+
+                        if (imgUrl) {
+                            items.push({
+                                url: imgUrl,
+                                sub: sub,
+                                date: updated ? new Date(updated).toLocaleDateString(undefined, {
+                                    year: 'numeric',
+                                    month: 'short',
+                                    day: 'numeric'
+                                }) : ""
+                            });
                         }
                     });
 
