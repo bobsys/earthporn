@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Two Frame Cropped Layout</title>
+<style>
+  body, html {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: Arial, sans-serif;
+  }
+
+  /* Main container for the two frames */
+  .page-wrapper {
+    display: flex;
+    height: 100vh; /* Sets the container height to the full browser window height */
+  }
+
+  /* Styling for the large right frame */
+  .right-frame {
+    flex-grow: 1; /* Allows this frame to take all remaining horizontal space */
+    padding: 20px;
+    background-color: #000000;
+ }
+
+  /* This is the container that creates the "crop" effect */
+  .crop-container {
+    width: 640px;
+    height: 527px;
+    overflow: hidden; /* Hides any part of the iframe outside this container's dimensions */
+    position: relative; /* Required for positioning the iframe inside */
+    border: 1px solid #333; /* A border to make the cropped area visible */
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+  }
+
+  /* The iframe that holds the external website */
+  .crop-container iframe {
+    /* Position the iframe to show the top-left corner */
+    position: absolute;
+    top: 0;
+    left: 0;
+    
+    /* Set a size for the iframe content that is larger than the container */
+    width: 1024px;
+    height: 768px;
+    
+    /* Removes the default iframe border */
+    border: 0;
+  }
+</style>
+</head>
+<body>
+
+<div class="page-wrapper">
+   <div class="right-frame">
+    <div class="crop-container">
+      <iframe src="https://weatherstar.netbymatt.com/" scrolling="no"></iframe>
+    </div>
+  </div>
+  
+</div>
+
+</body>
+</html>

@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <!-- Meta tags -->
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0" name="viewport" />
+    <meta name="viewport" content="width=device-width" />
+
+    <!-- Favicon and title -->
+    <link rel="icon" href="path/to/fav.png">
+    <!-- Halfmoon -->
+    <link href="https://cdn.jsdelivr.net/npm/halfmoon@1.1.1/css/halfmoon.min.css" rel="stylesheet" />
+    <!-- Font awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
+        integrity="sha256-eZrrJcwDc/3uDhsdt61sL2oOBY362qM3lon1gyExkL0=" crossorigin="anonymous" />
+    <!-- Roboto font (Used when Apple system fonts are not available) -->
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <title>Bob's Home Page</title>
+    <script src="https://cdn.jsdelivr.net/npm/halfmoon@1.1.1/js/halfmoon.min.js"></script>
+    <!-- Halfmoon CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/halfmoon@1.1.1/css/halfmoon-variables.min.css" rel="stylesheet" />
+
+    <style>
+        iframe {
+            border: 0;
+        }
+        #maindiv {
+            background-color: #3f3f3f;
+            background-image: url("data:image/svg+xml,%3Csvg width='16' height='20' viewBox='0 0 16 20' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23020004' fill-opacity='0.13' fill-rule='evenodd'%3E%3Cpath d='M8 0v20L0 10M16 0v10L8 0M16 10v10H8'/%3E%3C/g%3E%3C/svg%3E");
+}
+    </style>
+</head>
+
+<body class="with-custom-webkit-scrollbars with-custom-css-scrollbars" data-dm-shortcut-enabled="true"
+    data-sidebar-shortcut-enabled="true" data-set-preferred-mode-onload="true">
+    <!-- Modals go here -->
+    <!-- Reference: https://www.gethalfmoon.com/docs/modal -->
+    <!-- Page wrapper start -->
+    <div class="page-wrapper with-navbar with-sidebar">
+
+        <!-- Sticky alerts (toasts), empty container -->
+        <!-- Reference: https://www.gethalfmoon.com/docs/sticky-alerts-toasts -->
+        <div class="sticky-alerts"></div>
+
+        <!-- Navbar start -->
+        <nav class="navbar">
+            <div class="navbar-content">
+                <button class="btn btn-action" type="button" onclick="halfmoon.toggleSidebar()">
+                    <i class="fa fa-bars" aria-hidden="true"></i>
+                    <span class="sr-only">Toggle sidebar</span> <!-- sr-only = show only on screen readers -->
+                </button>
+            </div>
+            <div class="navbar-content">
+                <button class="btn btn-action" type="button" onclick="halfmoon.toggleDarkMode()">
+                    <i class="fa fa-moon-o" aria-hidden="true"></i>
+                    <span class="sr-only">Toggle dark mode</span>
+                </button>
+            </div>
+            <!-- text-monospace = font-family shifted to monospace -->
+            <!-- Navbar content (with the dropdown menu) -->
+            <div class="navbar-content d-md-none ml-auto">
+                <!-- d-md-none = display: none on medium screens and up (width > 768px), ml-auto = margin-left: auto -->
+                <div class="dropdown with-arrow">
+                    <button class="btn" data-toggle="dropdown" type="button" id="navbar-dropdown-toggle-btn-1">
+                        Menu
+                        <i class="fa fa-angle-down" aria-hidden="true"></i>
+                    </button>
+                    <div class="dropdown-menu dropdown-menu-right w-200" aria-labelledby="navbar-dropdown-toggle-btn-1">
+                        <!-- w-200 = width: 20rem (200px) -->
+                        <a href="#" class="dropdown-item">News</a>
+                        <a href="#" class="dropdown-item">roccode</a>
+                        <div class="dropdown-divider"></div>
+                        <div class="dropdown-content">
+                            <form action="..." method="...">
+                                <div class="form-group">
+                                    <input type="text" class="form-control" placeholder="Email address"
+                                        required="required">
+                                </div>
+                                <button class="btn btn-primary btn-block" type="submit">Sign up</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Reference: https://www.gethalfmoon.com/docs/navbar -->
+        </nav>
+        <!-- Navbar end -->
+
+        <!-- Sidebar start -->
+        <div id="maindiv" class="sidebar">
+            <div class="sidebar-menu">
+                <!-- Sidebar brand -->
+                <div class="sidebar-content">
+                    <h3 style="color:violet;">Bob's Resume</h3>
+                    <img src="bob7.png" width="192" height="200">
+                </div>
+                <!-- Sidebar links and titles -->
+                <div class="sidebar-divider"></div>
+                <a href="#Name" id="Menu_Tech" class="sidebar-link" onclick="">Top</a>
+                <a href="#Status" id="Menu_Tech" class="sidebar-link" onclick="">Status</a>
+                <a href="#Background" id="Menu_Tech" class="sidebar-link" onclick="">Background</a>
+                <a href="#Experience" id="Menu_Tech" class="sidebar-link" onclick="">Experience</a>
+                <a href="#Education" id="Menu_Tech" class="sidebar-link" onclick="">Education</a>
+               <br />
+                <h5 class="sidebar-title">Links</h5>
+                <div class="sidebar-divider"></div>
+                <a href="RPD Resume.doc" class="sidebar-link" target="_blank">Download My Resume</a>
+                <a href="https://www.roccode.com" class="sidebar-link" target="_blank">Visit the roccode website</a>
+                <a href="https://letsmeet.no/gz0nmka4" class="sidebar-link" target="_blank">Video Chat</a>
+                <br>
+                <div class="card">Update: 02182023</div>
+            </div>
+        </div>
+        <!-- Sidebar end -->
+
+        <!-- Content wrapper start -->
+        <div class="content-wrapper">
+            <div class="container-fluid">
+                <a name="Name"></a>
+                <div class="content">
+                <h1 class="content-title font-size-22" style="color:violet;">Robert Dolan</h1>
+                <h1 class="content-title font-size-18" style="color:blue;">Rochester, NY<br>strath291@gmail.com</h1>
+                </div>
+
+                <!-- First comes a content container -->
+                <a name="Status"></a>
+                <div class="content">
+                <h1 class="content-title font-size-22" style="color:violet;">Status</h1>
+                </div>
+
+                <!-- Next comes a card -->
+                <div class="card">
+                <p>
+                After a successful 45-year career as a software engineer, project manager, and system architect, I have recently retired. However, I have not lost my passion for coding and have continued to stay up to date with multiple programming languages and platforms.
+                </p>
+                <p>
+                I am now seeking to return to the workforce and am looking for roles that are compatible with my experience. I believe that I have a lot to offer to potential employers and am excited to bring my skills and knowledge to new projects.
+                </p>
+                <p>
+                Ideally, I am looking for remote positions that will allow me to work from home. However, I am open to occasional on-site work as well.
+                </p>
+                <p>
+                If you have a project or position that you believe would be a good fit for my experience and skills, I would love to connect with you. Please email me at strath291@gmail.com, and we can discuss how I can contribute to your team and help improve your bottom line. Thank you for considering my application, and I look forward to hearing from you soon.
+                </p>
+                </div>
+            
+
+                <a name="Background"></a>
+                <div class="content">
+                <h1 class="content-title font-size-22" style="color:violet;">Background</h1>
+                </div>
+
+                <!-- Next comes a card -->
+                <div class="card">
+                <p>
+                As a software engineering professional, I have accumulated extensive experience in both team leadership and individual contributor roles. Throughout my career, I have successfully led the full scope of several projects, with my training and experience in the CMM software process providing predictability and structure to these efforts.
+                </p>
+                <p>
+                With an extensive technical background, I have been able to drive the architecture and design phases of each of these projects. I take pride in designing and developing software solutions on a number of platforms, with a focus on Windows, Android, and web applications. Although my primary focus is on these platforms, I also have some experience developing on Linux.
+                </p>
+                <p>
+                In terms of programming languages, I possess fluent to expert-level capability in the following:
+                    <ul>
+                    <li>C</li>
+                    <li>C++</li>
+                    <li>C#</li>
+                    <li>HTML</li>
+                    <li>Java</li>
+                    <li>Javascript</li>
+                    <li>CSS</li>
+                    <li>PHP</li>
+                    <li>Python</li>
+                    <li>GDScript</li>
+                    <li>Assembler</li>
+                    </ul>
+                </p>
+                
+                <p>
+                Developing games and Windows applications has been a long-standing passion of mine, and I have continued to pursue this interest throughout my retirement, particularly during the pandemic. If you're interested, some of my game development work is available to view on my website: <a href="https://www.roccode.com" target="_blank">roccode</a>
+                </p>
+
+                <p>
+                In addition to my game development work, I have also recently rebuilt my personal website, which includes a resume page that showcases my skills and experience. I built this site myself using a combination of HTML, CSS, JavaScript, PHP, and Python. You can check it out at <a href="http://www.bobdolan.net" target="_blank">bobdolan.net</a>
+                </p>
+                
+                <p>
+                As part of my ongoing interest in software development, I am currently working on a Windows desktop management application called AppPad. This application is built using .Net, C#, and WinForms, and I am happy to provide more information about it upon request.
+                </p>
+                
+                <p>
+                Thank you for considering my skills and experience in software development. If you have any further questions or would like to discuss potential opportunities, please don't hesitate to reach out to me.
+                </p>
+                </div>
+                
+                <a name="Experience"></a>
+                <div class="content">
+                <h1 class="content-title font-size-22" style="color:violet;">Experience</h1>
+                </div>
+
+                <div class="card">
+                  <h2 class="content-title" style="color:blue;">
+                    Quality Vision International 2004-2020
+                  </h2>
+                  <p>
+                    As a Senior Developer, I was responsible for producing software to control high-precision metrology systems, utilizing Microsoft .Net and C# programming languages. These systems employed a combination of vision, laser, and touch probe sensing elements to facilitate both manual and automated quality assurance processes.  
+                  </p>
+                <p>In this role, I was personally responsible for leading the requirements definition process, high-level design, architecture, and implementation of the software. I took pride in my ability to ensure the quality and precision of the resulting product, which was essential for the success of the metrology systems.
+                </p>
+                </div>
+
+                <div class="card">
+                  <h2 class="content-title" style="color:blue;">
+                    Eastman Kodak 2000-2004
+                  </h2>
+                  <p>
+                    As the head of the advanced system software R&D effort, I led a team responsible for developing cutting-edge software for various systems. One of the most significant accomplishments during this time was leading the product development phase of a large-scale image processing system for Windows.
+                  </p>
+                <p>My leadership and guidance during the development of this system were instrumental in its success. I was able to provide strategic direction to the team and ensure that we were consistently meeting and exceeding project milestones. I take pride in my ability to effectively manage and motivate a team while also delivering high-quality software products.
+                </p>
+                </div>
+                
+                <div class="card">
+                  <h2 class="content-title" style="color:blue;">
+                    Xerox 1985-2000
+                  </h2>
+                  <p>
+                    Throughout my time at Xerox, I have held various roles in the software development process related to document scanners, including embedded development, as well as high volume laser printing systems, which included kernel mode drivers. The majority of the development tools I used were C++ and assembler.
+                  </p>
+                <p>In recognition of my commitment to high-quality software development practices, I received full CMM training and was certified as a CMM auditor. This certification enabled me to further refine my skills in areas such as requirements management, project planning, software design, and quality assurance, which were all essential to the success of these software projects.
+                </p>
+                </div>
+
+                <a name="Education"></a>
+                <div class="content">
+                <h1 class="content-title font-size-22" style="color:violet;">Education</h1>
+                </div>
+
+                <div class="card">
+                  <h2 class="content-title" style="color:blue;">
+                    Monroe Community College
+                  </h2>
+                  <p>
+                      A.A.S in Mechanical Engineering 1981
+                  </p>
+                  <p>
+                      MCAD .Net Certification from Microsoft 2004
+                  </p>
+                  <p>
+                      Various management training programs while at Eastman Kodak
+                  </p>
+                </div>
+
+            </div>
+    <nav class="navbar navbar-fixed-bottom">
+        <div class="navbar-content">
+            Copyright © 2023 Bob Dolan
+        </div>
+    </nav>
+        </div>
+
+            <!--
+        Add your page's main content here
+        Examples:
+        1. https://www.gethalfmoon.com/docs/content-and-cards/#building-a-page
+        2. https://www.gethalfmoon.com/docs/grid-system/#building-a-dashboard
+        -->
+
+        </div>
+        <!-- Content wrapper end -->
+
+
+    </div>
+    <!-- Page wrapper end -->
+</body>
+</html>

@@ -1,0 +1,15 @@
+https://games.bobdolan.net/* https://roccode-games.netlify.app/:splat 200!
+/games/*  https://roccode-games.netlify.app/:splat  200!
+/2048/*  https://roccode-2048.netlify.app/:splat  200
+/scat/*  https://roccode-scat.netlify.app/:splat  200
+/poker/*  https://roccode-poker.netlify.app/:splat  200
+/montana/*  https://roccode-montana.netlify.app/:splat  200
+/picross/*  https://roccode-picross.netlify.app/:splat  200
+/sorted/*  https://roccode-sorted.netlify.app/:splat  200
+/mispeld/*  https://roccode-mispeld.netlify.app/:splat  200
+/hexfield/*  https://roccode-hexfield.netlify.app/:splat  200
+/bottles/*  https://roccode-bottles.netlify.app/:splat  200
+/debunkify/*  https://roccode-debunkify.netlify.app/:splat  200
+/infinity/*  https://roccode-infinity.netlify.app/:splat  200
+/order/*  https://roccode-order.netlify.app/:splat  200
+

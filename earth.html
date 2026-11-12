@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nature Aggregator - Pro Edition</title>
+    <style>
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            overflow: hidden; background-color: #000;
+            font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        }
+
+        /* --- VIGNETTE OVERLAY --- */
+        .vignette {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle, transparent 40%, rgba(0,0,0,0.5) 90%, rgba(0,0,0,0.8) 100%);
+            z-index: 50; pointer-events: none;
+        }
+
+        .slide-container {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            opacity: 0; filter: blur(20px);
+            transition: opacity 2.5s ease-in-out, filter 2.5s ease-in-out;
+            z-index: 0; display: flex; align-items: center; justify-content: center;
+        }
+
+        .slide-container.active { opacity: 1; filter: blur(0px); z-index: 1; }
+
+        .bg-blur {
+            position: absolute; top: -5%; left: -5%; width: 110%; height: 110%;
+            background-size: cover; background-position: center;
+            filter: blur(80px) brightness(0.3); z-index: -1;
+        }
+
+        .img-wrapper {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            /* Edge Feathering from earth.html */
+            mask-image: 
+                linear-gradient(to bottom, transparent, black 5%, black 95%, transparent),
+                linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+            mask-composite: intersect;
+            -webkit-mask-image: 
+                linear-gradient(to bottom, transparent, black 5%, black 95%, transparent),
+                linear-gradient(to right, transparent, black 5%, black 95%, transparent);
+            -webkit-mask-composite: source-in;
+            overflow: hidden;
+        }
+
+        .fg-img {
+            width: 110%; height: 110%;
+            object-fit: cover; position: absolute; z-index: 2;
+            transition: transform 0s linear; 
+        }
+
+        /* --- Metadata & UI --- */
+        #meta-info {
+            position: absolute; bottom: 8%; left: 50%; transform: translateX(-50%);
+            color: rgba(255, 255, 255, 0.9); font-size: 13px; font-weight: 400;
+            letter-spacing: 2px; text-transform: uppercase; z-index: 150;
+            text-shadow: 0 0 15px rgba(0,0,0,1);
+            opacity: 0; transition: opacity 0.8s ease-in-out;
+            pointer-events: none; text-align: center;
+        }
+        #meta-info.visible { opacity: 1; }
+        #meta-info.force-hide { opacity: 0 !important; }
+
+        #message-overlay {
+            position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
+            color: white; font-size: 18px; z-index: 200; pointer-events: none;
+            background: rgba(0,0,0,0.7); padding: 15px 30px; border-radius: 30px;
+            opacity: 0; transition: opacity 0.5s; backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        #message-overlay.visible { opacity: 1; }
+
+        #controls {
+            position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+            background: rgba(10, 10, 10, 0.95); padding: 20px 30px; border-radius: 15px;
+            display: flex; gap: 30px; color: white; z-index: 100;
+            opacity: 0; transition: opacity 0.4s ease;
+            backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1);
+            align-items: center;
+        }
+
+        .control-group { display: flex; flex-direction: column; align-items: center; min-width: 140px; }
+        label { margin-bottom: 8px; font-size: 10px; font-weight: 800; text-transform: uppercase; color: #888; letter-spacing: 1px; }
+        input[type=range] { width: 100%; cursor: pointer; accent-color: #2ecc71; }
+        .checkbox-group { display: flex; align-items: center; gap: 10px; cursor: pointer; color: #fff;}
+        .checkbox-group input { width: 16px; height: 16px; accent-color: #2ecc71; }
+        .value-display { font-size: 10px; color: #666; margin-top: 5px; }
+    </style>
+</head>
+<body>
+
+    <div class="vignette"></div>
+
+    <div id="slide1" class="slide-container">
+        <div class="bg-blur"></div>
+        <div class="img-wrapper"><img class="fg-img" id="img1" src=""></div>
+    </div>
+    <div id="slide2" class="slide-container">
+        <div class="bg-blur"></div>
+        <div class="img-wrapper"><img class="fg-img" id="img2" src=""></div>
+    </div>
+
+    <div id="meta-info"></div>
+    <div id="message-overlay">Connecting...</div>
+
+    <div id="controls">
+        <div class="control-group">
+            <label>Slide Duration</label>
+            <input type="range" id="timeSlider" min="5" max="300" value="15">
+            <div class="value-display"><span id="timeVal">15</span>s</div>
+        </div>
+        <div class="control-group">
+            <label>Info Duration</label>
+            <input type="range" id="infoSlider" min="0" max="15" value="6">
+            <div class="value-display"><span id="infoVal">6</span>s</div>
+        </div>
+        <div class="control-group">
+            <label>Image Count</label>
+            <input type="range" id="countSlider" min="10" max="100" value="40">
+            <div class="value-display"><span id="countVal">40</span></div>
+        </div>
+        <div class="control-group">
+            <label class="checkbox-group">
+                <input type="checkbox" id="shuffleCheck" checked>
+                Shuffle
+            </label>
+        </div>
+    </div>
+
+    <script>
+        const SUBS = ["earthporn", "telephotolandscapes", "naturephotography", "LandscapePhotography"];
+        
+        const state = { 
+            images: [], 
+            currentIndex: -1, 
+            displayTime: 15000, 
+            infoTime: 6000, 
+            imageLimit: 40, 
+            shouldShuffle: true, 
+            timers: { slide: null, ui: null, reload: null, info: null }, 
+            activeSlide: 1, 
+            isUIActive: false 
+        };
+
+        const els = { 
+            slides: [document.getElementById('slide1'), document.getElementById('slide2')], 
+            imgs: [document.getElementById('img1'), document.getElementById('img2')],
+            msg: document.getElementById('message-overlay'),
+            meta: document.getElementById('meta-info'), 
+            controls: document.getElementById('controls'), 
+            timeSlider: document.getElementById('timeSlider'), 
+            timeVal: document.getElementById('timeVal'), 
+            infoSlider: document.getElementById('infoSlider'), 
+            infoVal: document.getElementById('infoVal'), 
+            countSlider: document.getElementById('countSlider'), 
+            countVal: document.getElementById('countVal'), 
+            shuffleCheck: document.getElementById('shuffleCheck') 
+        };
+
+        async function init() { setupEvents(); await loadContent(); }
+
+        async function loadContent1() {
+            if (state.timers.slide) clearTimeout(state.timers.slide);
+            showMessage("Refreshing feeds...", true);
+            
+            let pool = [];
+            const requests = SUBS.map(async (sub) => {
+                try {
+                    const rss = `https://www.reddit.com/r/${sub}/.rss`;
+                    const url = `https://api.rss2json.com/v1/api.json?rss_url=${encodeURIComponent(rss)}`;
+                    const res = await fetch(url);
+                    const data = await res.json();
+                    return (data.items || []).map(item => {
+                        const html = item.content || item.description;
+                        const match = html.match(/href="([^"]*i\.redd\.it\/[^"]*\.(jpg|jpeg|png))"/i);
+                        return match ? { url: match[1], sub: sub, date: new Date(item.pubDate).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }) } : null;
+                    }).filter(u => !!u);
+                } catch (e) { return []; }
+            });
+            
+            const results = await Promise.all(requests);
+            results.forEach(list => pool.push(...list));
+            
+            if (state.shouldShuffle) pool.sort(() => Math.random() - 0.5);
+            state.images = pool.slice(0, state.imageLimit);
+            
+            if (state.images.length > 0) {
+                showMessage(`Loaded ${state.images.length} images`);
+                state.currentIndex = -1;
+                nextSlide();
+            } else {
+                showMessage("Feed unavailable. Check connection.", true);
+            }
+        }
+
+//###########################################################################################
+
+        const CACHE_TTL = 30 * 60 * 1000; // 30 minutes
+        const delay = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+
+        async function loadContent() {
+            if (state.timers.slide) clearTimeout(state.timers.slide);
+            showMessage("Refreshing feeds...", true);
+            
+            let pool = [];
+
+            for (const sub of SUBS) {
+                const cacheKey = `reddit_img_cache_${sub}`;
+                const cached = localStorage.getItem(cacheKey);
+
+                // 1. Use localStorage cache if less than 30 minutes old
+                if (cached) {
+                    const { timestamp, items } = JSON.parse(cached);
+                    if (Date.now() - timestamp < CACHE_TTL) {
+                        pool.push(...items);
+                        continue;
+                    }
+                }
+
+                // 2. Fetch from your own Netlify Function (same origin = zero CORS errors)
+                try {
+                    const res = await fetch(`/.netlify/functions/reddit?sub=${encodeURIComponent(sub)}`);
+                    
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    
+                    const items = await res.json();
+
+                    localStorage.setItem(cacheKey, JSON.stringify({
+                        timestamp: Date.now(),
+                        items
+                    }));
+
+                    pool.push(...items);
+                    await delay(300);
+                } catch (e) {
+                    console.warn(`Failed to fetch r/${sub}:`, e);
+                    if (cached) {
+                        pool.push(...JSON.parse(cached).items);
+                    }
+                }
+            }
+            
+            if (state.shouldShuffle) pool.sort(() => Math.random() - 0.5);
+            state.images = pool.slice(0, state.imageLimit);
+            
+            if (state.images.length > 0) {
+                showMessage(`Loaded ${state.images.length} images`);
+                state.currentIndex = -1;
+                nextSlide();
+            } else {
+                showMessage("Feed unavailable. Check connection.", true);
+            }
+        }
+
+//###########################################################################################
+
+        function applySubtleKenBurns(imgElement, isStart) {
+            if (isStart) {
+                const startX = (Math.random() * 6 - 3);
+                const startY = (Math.random() * 6 - 3);
+                imgElement.style.transition = 'none';
+                imgElement.style.transform = `scale(1.0) translate(${startX}%, ${startY}%)`;
+            } else {
+                const endX = (Math.random() * 6 - 3);
+                const endY = (Math.random() * 6 - 3);
+                imgElement.style.transition = `transform ${state.displayTime + 2000}ms linear`;
+                imgElement.style.transform = `scale(1.15) translate(${endX}%, ${endY}%)`;
+            }
+        }
+
+        function nextSlide() {
+            if (!state.images.length) return;
+            state.currentIndex = (state.currentIndex + 1) % state.images.length;
+            const nextIdx = state.activeSlide === 1 ? 1 : 0;
+            const currIdx = state.activeSlide === 1 ? 0 : 1;
+            const imgData = state.images[state.currentIndex];
+            
+            const loader = new Image();
+            loader.onload = () => {
+                els.slides[nextIdx].querySelector('.bg-blur').style.backgroundImage = `url('${imgData.url}')`;
+                els.imgs[nextIdx].src = imgData.url;
+                applySubtleKenBurns(els.imgs[nextIdx], true);
+                
+                els.slides[currIdx].classList.remove('active');
+                els.slides[nextIdx].classList.add('active');
+
+                setTimeout(() => applySubtleKenBurns(els.imgs[nextIdx], false), 100);
+                els.meta.innerHTML = `r/${imgData.sub} &nbsp; | &nbsp; ${imgData.date}`;
+                showMeta();
+                
+                state.activeSlide = (state.activeSlide === 1) ? 2 : 1;
+                state.timers.slide = setTimeout(nextSlide, state.displayTime);
+            };
+            loader.onerror = () => setTimeout(nextSlide, 100);
+            loader.src = imgData.url;
+        }
+
+        function showMeta() {
+            if (state.timers.info) clearTimeout(state.timers.info);
+            if (state.infoTime > 0 && !state.isUIActive) { 
+                els.meta.classList.add('visible'); 
+                state.timers.info = setTimeout(() => els.meta.classList.remove('visible'), state.infoTime); 
+            } else { els.meta.classList.remove('visible'); }
+        }
+
+        function showMessage(txt, sticky = false) {
+            els.msg.textContent = txt;
+            els.msg.classList.add('visible');
+            if (!sticky) setTimeout(() => els.msg.classList.remove('visible'), 3000);
+        }
+
+        function debounceReload() {
+            if (state.timers.reload) clearTimeout(state.timers.reload);
+            state.timers.reload = setTimeout(loadContent, 4000);
+        }
+
+        function setupEvents() {
+            els.timeSlider.oninput = (e) => { state.displayTime = parseInt(e.target.value) * 1000; els.timeVal.textContent = e.target.value; };
+            els.infoSlider.oninput = (e) => { state.infoTime = parseInt(e.target.value) * 1000; els.infoVal.textContent = e.target.value; showMeta(); };
+            els.countSlider.oninput = (e) => { state.imageLimit = e.target.value; els.countVal.textContent = e.target.value; debounceReload(); };
+            els.shuffleCheck.onchange = (e) => { state.shouldShuffle = e.target.checked; debounceReload(); };
+            
+            window.onmousemove = () => {
+                state.isUIActive = true;
+                els.controls.style.opacity = 1;
+                els.meta.classList.add('force-hide');
+                if (state.timers.ui) clearTimeout(state.timers.ui);
+                state.timers.ui = setTimeout(() => {
+                    els.controls.style.opacity = 0;
+                    els.meta.classList.remove('force-hide');
+                    state.isUIActive = false;
+                    showMeta();
+                }, 3000);
+            };
+        }
+        init();
+    </script>
+</body>
+</html>
