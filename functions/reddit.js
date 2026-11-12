@@ -1,4 +1,4 @@
-export async function handler(event) {
+exports.handler = async function (event) {
   const sub = event.queryStringParameters?.sub;
 
   if (!sub || !/^[a-zA-Z0-9_]+$/.test(sub)) {
@@ -11,7 +11,6 @@ export async function handler(event) {
   try {
     const response = await fetch(`https://www.reddit.com/r/${sub}.json?limit=25`, {
       headers: {
-        // Reddit requires a unique, descriptive User-Agent for server requests
         "User-Agent": "web:earth-slideshow-app:v1.0 (by /u/netlify_user)"
       }
     });
@@ -43,7 +42,6 @@ export async function handler(event) {
       statusCode: 200,
       headers: {
         "Content-Type": "application/json",
-        // Cache at Netlify's CDN edge for 30 minutes to prevent rate-limiting
         "Cache-Control": "public, max-age=1800, s-maxage=1800"
       },
       body: JSON.stringify(items)
@@ -54,4 +52,4 @@ export async function handler(event) {
       body: JSON.stringify({ error: err.message })
     };
   }
-}
+};
