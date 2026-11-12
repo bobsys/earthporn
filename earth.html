@@ -215,7 +215,6 @@
                 const cacheKey = `reddit_img_cache_${sub}`;
                 const cached = localStorage.getItem(cacheKey);
 
-                // 1. Use localStorage cache ONLY if valid, non-empty, and less than 30 minutes old
                 if (!forceRefresh && cached) {
                     try {
                         const { timestamp, items } = JSON.parse(cached);
@@ -228,46 +227,46 @@
                     }
                 }
 
-                // 2. Fetch through your Netlify rss-proxy function
                 try {
                     const rssUrl = `https://reddit.com{sub}/.rss`;
                     const res = await fetch(`/.netlify/functions/rss-proxy?url=${encodeURIComponent(rssUrl)}`);
                     
                     if (!res.ok) throw new Error(`HTTP ${res.status}`);
                     
-                    const data = await res.json();
-                    if (data.error) throw new Error(data.details || data.error);
+                    const json = await res.json();
+                    if (json.error) throw new Error(json.details || json.error);
 
-                    const items = (data.items || []).map(item => {
-                        const html = item.content || item.description || "";
-                        let imgUrl = null;
+                    const posts = json?.data?.children || [];
+                    const items = [];
 
-                        // Extract index [1] (the captured URL string) for direct i.redd.it links
-                        const directMatch = html.match(/href="([^"]*i\.redd\.it\/[^"]*\.(jpg|jpeg|png))"/i);
-                        if (directMatch && directMatch[1]) {
-                            imgUrl = directMatch[1];
+                    posts.forEach(post => {
+                        const d = post.data;
+                        if (!d || d.over_18) return;
+
+                        const dateStr = new Date(d.created_utc * 1000).toLocaleDateString(undefined, {
+                            year: 'numeric',
+                            month: 'short',
+                            day: 'numeric'
+                        });
+
+                        // 1. Standard direct i.redd.it image
+                        if (d.url && /\.(jpg|jpeg|png)$/i.test(d.url) && d.url.includes('i.redd.it')) {
+                            items.push({ url: d.url, sub, date: dateStr });
                         } 
-                        // Otherwise, extract index [1] for Reddit gallery preview images
-                        else if (item.link && item.link.includes('/gallery/')) {
-                            const thumbUrl = item.mediaThumbnail?.$?.url || item.mediaContent?.$?.url;
-                            const previewMatch = html.match(/src="([^"]*preview\.redd\.it\/[^"]*)"/i);
-                            const rawUrl = thumbUrl || (previewMatch ? previewMatch[1] : null);
-
+                        // 2. Reddit Gallery post (extracts the first gallery image cleanly)
+                        else if (d.is_gallery && d.media_metadata) {
+                            const firstId = d.gallery_data?.items?.[0]?.media_id || Object.keys(d.media_metadata)[0];
+                            const media = d.media_metadata[firstId];
+                            const rawUrl = media?.s?.u || media?.s?.gif;
                             if (rawUrl) {
-                                imgUrl = rawUrl.replace(/&amp;/g, '&');
+                                items.push({
+                                    url: rawUrl.replace(/&amp;/g, '&'),
+                                    sub,
+                                    date: dateStr
+                                });
                             }
                         }
-
-                        return imgUrl ? {
-                            url: imgUrl,
-                            sub: sub,
-                            date: new Date(item.pubDate || item.isoDate).toLocaleDateString(undefined, {
-                                year: 'numeric',
-                                month: 'short',
-                                day: 'numeric'
-                            })
-                        } : null;
-                    }).filter(Boolean);
+                    });
 
                     if (items.length > 0) {
                         localStorage.setItem(cacheKey, JSON.stringify({
@@ -277,20 +276,16 @@
                         pool.push(...items);
                     } else if (cached) {
                         const parsed = JSON.parse(cached);
-                        if (parsed.items?.length > 0 && typeof parsed.items[0].url === 'string') {
-                            pool.push(...parsed.items);
-                        }
+                        if (parsed.items?.length > 0) pool.push(...parsed.items);
                     }
 
-                    await delay(600);
+                    await delay(500);
                 } catch (e) {
                     console.warn(`Failed to fetch r/${sub}:`, e);
                     if (cached) {
                         try {
                             const parsed = JSON.parse(cached);
-                            if (parsed.items?.length > 0 && typeof parsed.items[0].url === 'string') {
-                                pool.push(...parsed.items);
-                            }
+                            if (parsed.items?.length > 0) pool.push(...parsed.items);
                         } catch (err) {}
                     }
                 }
