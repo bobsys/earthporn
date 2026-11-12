@@ -1,3 +1,38 @@
+const https = require('https');
+
+function fetchUrl(url, redirectsLeft = 3) {
+    return new Promise((resolve, reject) => {
+        const req = https.get(url, {
+            headers: {
+                // Reddit specifically asks bots/apps to use a descriptive User-Agent format
+                'User-Agent': 'web:earth-slideshow-viewer:v1.0.0 (by /u/earth_viewer_app)',
+                'Accept': 'application/rss+xml, application/xml, text/xml, */*',
+                'Accept-Language': 'en-US,en;q=0.9',
+                'Connection': 'close'
+            },
+            timeout: 8000
+        }, (res) => {
+            // Follow 301/302 redirects if Reddit redirects the URL
+            if ([301, 302, 307, 308].includes(res.statusCode) && res.headers.location && redirectsLeft > 0) {
+                const nextUrl = new URL(res.headers.location, url).toString();
+                res.resume();
+                return resolve(fetchUrl(nextUrl, redirectsLeft - 1));
+            }
+
+            let data = '';
+            res.setEncoding('utf8');
+            res.on('data', chunk => { data += chunk; });
+            res.on('end', () => resolve({ status: res.statusCode, statusMessage: res.statusMessage, body: data }));
+        });
+
+        req.on('timeout', () => {
+            req.destroy(new Error('Request timed out after 8s'));
+        });
+
+        req.on('error', (err) => reject(err));
+    });
+}
+
 exports.handler = async (event) => {
     const feedUrl = event.queryStringParameters?.url;
 
@@ -10,43 +45,39 @@ exports.handler = async (event) => {
     }
 
     try {
-        // Convert Reddit .rss URLs to clean .json URLs automatically
-        const targetUrl = feedUrl.includes('reddit.com/r/')
-            ? feedUrl.replace(/\/?\.rss.*$/, '.json?limit=30')
-            : feedUrl;
+        // Use ://reddit.com as a fallback if ://reddit.com drops AWS Lambda connections
+        const targetUrl = feedUrl.replace('https://://reddit.com/', 'https://://reddit.com/');
+        const result = await fetchUrl(targetUrl);
 
-        const response = await fetch(targetUrl, {
-            headers: {
-                'User-Agent': 'Mozilla/5.0 (compatible; EarthSlideshowBot/1.0; +https://netlify.app)',
-                'Accept': 'application/json, application/rss+xml, text/xml'
-            }
-        });
-
-        if (!response.ok) {
+        if (result.status < 200 || result.status >= 300) {
             return {
-                statusCode: response.status,
+                statusCode: result.status,
                 headers: { "Access-Control-Allow-Origin": "*" },
-                body: JSON.stringify({ error: `Source error ${response.status}`, details: response.statusText }),
+                body: JSON.stringify({
+                    error: `Source error ${result.status}`,
+                    details: result.statusMessage || `HTTP ${result.status}`
+                }),
             };
         }
-
-        const text = await response.text();
 
         return {
             statusCode: 200,
             headers: {
-                "Content-Type": "application/json",
+                "Content-Type": "application/xml; charset=utf-8",
                 "Access-Control-Allow-Origin": "*",
-                // Cache on Netlify's CDN for 30 minutes so repeated refreshes don't hit Reddit
                 "Cache-Control": "public, max-age=1800, s-maxage=1800"
             },
-            body: text,
+            body: result.body,
         };
     } catch (error) {
         return {
             statusCode: 500,
             headers: { "Access-Control-Allow-Origin": "*" },
-            body: JSON.stringify({ error: "Proxy Error", details: error.message }),
+            body: JSON.stringify({
+                error: "Proxy Error",
+                details: error.message,
+                code: error.code || null
+            }),
         };
     }
 };
