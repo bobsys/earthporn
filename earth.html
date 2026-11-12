@@ -215,12 +215,16 @@
                 const cacheKey = `reddit_img_cache_${sub}`;
                 const cached = localStorage.getItem(cacheKey);
 
-                // 1. Use localStorage cache if less than 30 minutes old (unless forceRefresh is true)
+                // 1. Use localStorage cache ONLY if valid, non-empty, and less than 30 minutes old
                 if (!forceRefresh && cached) {
-                    const { timestamp, items } = JSON.parse(cached);
-                    if (Date.now() - timestamp < CACHE_TTL) {
-                        pool.push(...items);
-                        continue;
+                    try {
+                        const { timestamp, items } = JSON.parse(cached);
+                        if (Date.now() - timestamp < CACHE_TTL && Array.isArray(items) && items.length > 0 && typeof items[0].url === 'string') {
+                            pool.push(...items);
+                            continue;
+                        }
+                    } catch (e) {
+                        localStorage.removeItem(cacheKey);
                     }
                 }
 
@@ -238,12 +242,12 @@
                         const html = item.content || item.description || "";
                         let imgUrl = null;
 
-                        // Check for a standard direct i.redd.it image link
+                        // Extract index [1] (the captured URL string) for direct i.redd.it links
                         const directMatch = html.match(/href="([^"]*i\.redd\.it\/[^"]*\.(jpg|jpeg|png))"/i);
                         if (directMatch && directMatch[1]) {
                             imgUrl = directMatch[1];
                         } 
-                        // Otherwise, check for a Reddit gallery post and extract its cover image
+                        // Otherwise, extract index [1] for Reddit gallery preview images
                         else if (item.link && item.link.includes('/gallery/')) {
                             const thumbUrl = item.mediaThumbnail?.$?.url || item.mediaContent?.$?.url;
                             const previewMatch = html.match(/src="([^"]*preview\.redd\.it\/[^"]*)"/i);
@@ -272,16 +276,22 @@
                         }));
                         pool.push(...items);
                     } else if (cached) {
-                        // Keep previous cache if the new fetch returned 0 valid items
-                        pool.push(...JSON.parse(cached).items);
+                        const parsed = JSON.parse(cached);
+                        if (parsed.items?.length > 0 && typeof parsed.items[0].url === 'string') {
+                            pool.push(...parsed.items);
+                        }
                     }
 
                     await delay(600);
                 } catch (e) {
                     console.warn(`Failed to fetch r/${sub}:`, e);
-                    // Safe fallback: restore previous cached items if Reddit rate-limits the refresh
                     if (cached) {
-                        pool.push(...JSON.parse(cached).items);
+                        try {
+                            const parsed = JSON.parse(cached);
+                            if (parsed.items?.length > 0 && typeof parsed.items[0].url === 'string') {
+                                pool.push(...parsed.items);
+                            }
+                        } catch (err) {}
                     }
                 }
             }
