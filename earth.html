@@ -221,13 +221,29 @@
                     }
                 }
 
-                // 2. Fetch from your own Netlify Function (same origin = zero CORS errors)
+                // 2. Use your existing, already-deployed rss-proxy function
                 try {
-                    const res = await fetch(`/.netlify/functions/reddit?sub=${encodeURIComponent(sub)}`);
+                    const rssUrl = `https://www.reddit.com/r/${sub}/.rss`;
+                    const res = await fetch(`/.netlify/functions/rss-proxy?url=${encodeURIComponent(rssUrl)}`);
                     
                     if (!res.ok) throw new Error(`HTTP ${res.status}`);
                     
-                    const items = await res.json();
+                    const data = await res.json();
+                    if (data.error) throw new Error(data.details || data.error);
+
+                    const items = (data.items || []).map(item => {
+                        const html = item.content || item.description || "";
+                        const match = html.match(/href="([^"]*i\.redd\.it\/[^"]*\.(jpg|jpeg|png))"/i);
+                        return match ? {
+                            url: match[1],
+                            sub: sub,
+                            date: new Date(item.pubDate || item.isoDate).toLocaleDateString(undefined, {
+                                year: 'numeric',
+                                month: 'short',
+                                day: 'numeric'
+                            })
+                        } : null;
+                    }).filter(Boolean);
 
                     localStorage.setItem(cacheKey, JSON.stringify({
                         timestamp: Date.now(),
