@@ -569,8 +569,8 @@
             const readerBtn = document.getElementById('reader-view-btn');
             const originalLink = document.getElementById('open-original-link');
 
-            // 1. Start in Reader Mode by default
-            let isReaderMode = true;
+            // 1. Default back to Web View (iframe)
+            let isReaderMode = false;
 
             const showIframe = () => {
                 isReaderMode = false;
@@ -599,8 +599,8 @@
             }
 
             if (readerBtn) {
-                // Button offers switching to Web View since Reader Mode is already active
-                readerBtn.textContent = '🌐 Web View';
+                // Offer Reader View as an optional toggle
+                readerBtn.textContent = '📖 Reader View';
                 readerBtn.onclick = () => {
                     if (!isReaderMode) {
                         isReaderMode = true;
@@ -618,8 +618,8 @@
                 articleControls.style.display = 'flex';
             }
 
-            // 4. Immediately load Reader View instead of showIframe()
-            loadReaderMode(articleUrl, articleTitle);
+            // 4. Load Web View (iframe) by default
+            showIframe();
         }
 
         function renderFeedItems(items, feedContainer, openInNewTab = false) {
