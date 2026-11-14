@@ -3,7 +3,7 @@
     "title": "News Feeds",
     "links": [
       {
-        "feed": "http://qz.com/feed",
+        "feed": "http://qz.com/#scrape",
         "title": "Quartz"
       },
       {
