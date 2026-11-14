@@ -30,8 +30,11 @@ async function enrichArticle(item) {
             return m?.groups?.val ? decodeEntities(m.groups.val) : null;
         };
 
+        const ldDesc = head.match(/"description"\s*:\s*"(?<val>[^"]{25,300})"/i)?.groups?.val;
+        const firstPara = head.match(/<p[^>]*>(?<val>[^<]{40,280})<\/p>/i)?.groups?.val;
+        const desc = getMeta('og:description') || getMeta('description') || ldDesc || firstPara;
+
         const img = getMeta('og:image') || getMeta('twitter:image');
-        const desc = getMeta('og:description') || getMeta('description');
         const ldDate = head.match(/"datePublished"\s*:\s*"(?<val>[^"]+)"/i)?.groups?.val;
         const pub = getMeta('article:published_time') || getMeta('og:updated_time') || ldDate;
 

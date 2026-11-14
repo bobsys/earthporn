@@ -1061,7 +1061,9 @@
                         title: stripHTML(item.title || 'No title'),
                         link: stripHTML(item.link || '#'),
                         // Expanded fallback for different RSS parser formats
-                        description: sanitizeDescription(item.description || item.content || item.contentSnippet || item.summary),
+                        description: isScrape
+                            ? (item.contentSnippet || 'No summary available.')
+                            : sanitizeDescription(item.description || item.content || item.contentSnippet || item.summary),
                         pubDate: formatHumanDate(stripHTML(item.pubDate || '')),
                         image: extractedImg
                     };
@@ -1314,18 +1316,54 @@
             }
         }
 
-        function renderFeedItems(items, feedContainer) {
+        let currentFeedItems = [];
+        let currentFeedTitle = '';
+        let currentOpenInNewTab = false;
+
+        function openArticleInRightPanel(articleUrl, articleTitle) {
+            feedTitle.textContent = articleTitle;
+            feedContainer.innerHTML = `
+                <div style="margin-bottom: 12px; display: flex; gap: 10px; align-items: center;">
+                    <button id="back-to-feed-btn" type="button">← Back to ${currentFeedTitle || 'Feed'}</button>
+                    <a href="${articleUrl}" target="_blank" rel="noopener" style="color: #4a90e2; font-size: 0.9em;">Open Original Page ↗</a>
+                </div>
+                <iframe src="${articleUrl}" style="width: 100%; height: calc(100vh - 210px); border: none; border-radius: 6px; background: #fff;"></iframe>
+            `;
+            scrollToTop();
+
+            document.getElementById('back-to-feed-btn')?.addEventListener('click', () => {
+                feedTitle.textContent = currentFeedTitle;
+                renderFeedItems(currentFeedItems, feedContainer, currentOpenInNewTab);
+                scrollToTop();
+            });
+        }
+
+        function renderFeedItems(items, feedContainer, openInNewTab = false) {
+            currentFeedItems = items;
+            currentOpenInNewTab = openInNewTab;
             feedContainer.innerHTML = '';
+
             items.forEach((item, index) => {
                 const feedItem = document.createElement('div');
                 feedItem.className = 'feed-item';
                 feedItem.style.opacity = '0';
+
+                const targetAttr = openInNewTab ? 'target="_blank" rel="noopener"' : '';
                 feedItem.innerHTML = `
-                    <h2><a href="${item.link}" target="_blank">${item.title}</a></h2>
+                    <h2><a href="${item.link}" ${targetAttr} class="article-link">${item.title}</a></h2>
                     ${item.image && item.image.trim() ? `<img src="${item.image}" alt="${item.title} thumbnail" onerror="this.style.display='none'">` : ''}
                     <p>${item.description}</p>
                     <div class="meta">Published: ${item.pubDate}</div>
                 `;
+
+                if (!openInNewTab) {
+                    const linkEl = feedItem.querySelector('.article-link');
+                    linkEl?.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        openArticleInRightPanel(item.link, item.title);
+                    });
+                }
+
                 feedContainer.appendChild(feedItem);
                 setTimeout(() => { feedItem.style.opacity = '1'; }, index * 50);
             });
@@ -1781,7 +1819,165 @@
             });
         }
 
-                function initEditFavoriteModal() {
+        function initEditFavoriteModal() {
+            const editButton = document.getElementById('edit-from-favorites');
+            const editModal = document.getElementById('edit-feed-modal');
+            const editModalCancel = document.getElementById('edit-modal-cancel-btn');
+            const editModalSave = document.getElementById('edit-modal-save-btn');
+            const editFeedTitleInput = document.getElementById('edit-feed-title');
+            const editFeedUrlInput = document.getElementById('edit-feed-url');
+            const editFeedSectionSelect = document.getElementById('edit-feed-section');
+            const editPrivateOnlyCheckbox = document.getElementById('edit-private-only-checkbox');
+            const editNewTabCheckbox = document.getElementById('edit-new-tab-checkbox');
+            const editScrapeCheckbox = document.getElementById('edit-scrape-page-checkbox');
+
+            let originalUrlToEdit = null;
+
+            editButton.addEventListener('click', async () => {
+                if (editButton.disabled) return;
+
+                const cleanInputUrl = rssInput.value.trim().replace(/#scrape$/, '');
+                if (!cleanInputUrl) return;
+
+                let linkToEdit = null;
+                let sectionOfLink = null;
+
+                // Match against loadedConfig regardless of whether #scrape is present
+                for (const section of loadedConfig) {
+                    const foundLink = section.links.find(link => {
+                        const saved = (link.feed || link.href || '').replace(/#scrape$/, '');
+                        return saved === cleanInputUrl;
+                    });
+                    if (foundLink) {
+                        linkToEdit = foundLink;
+                        sectionOfLink = section;
+                        originalUrlToEdit = foundLink.feed || foundLink.href;
+                        break;
+                    }
+                }
+
+                if (!linkToEdit) {
+                    alert('Could not find the selected link to edit.');
+                    return;
+                }
+
+                const rawSavedUrl = linkToEdit.feed || linkToEdit.href || '';
+                const hasScrapeFlag = rawSavedUrl.includes('#scrape');
+
+                // Pre-populate the edit modal inputs and checkboxes
+                editFeedTitleInput.value = linkToEdit.title;
+                editFeedUrlInput.value = rawSavedUrl.replace(/#scrape$/, '');
+                editNewTabCheckbox.checked = !!(linkToEdit.openArticlesInNewTab || linkToEdit.target);
+                if (editScrapeCheckbox) {
+                    editScrapeCheckbox.checked = hasScrapeFlag;
+                }
+
+                // Populate and select the section dropdown
+                editFeedSectionSelect.innerHTML = '';
+                loadedConfig.forEach(section => {
+                    const option = document.createElement('option');
+                    option.value = section.title;
+                    option.textContent = section.title;
+                    editFeedSectionSelect.appendChild(option);
+                });
+                editFeedSectionSelect.value = sectionOfLink.title;
+
+                // Pre-populate the "Private Only" checkbox
+                try {
+                    const publicConfigResponse = await fetch('public-links.json');
+                    const publicConfig = await publicConfigResponse.json();
+                    const isInPublic = publicConfig.some(section =>
+                        section.links.some(link => {
+                            const savedPublic = (link.feed || link.href || '').replace(/#scrape$/, '');
+                            return savedPublic === cleanInputUrl;
+                        })
+                    );
+                    editPrivateOnlyCheckbox.checked = !isInPublic;
+                } catch (error) {
+                    console.error("Could not check public config, defaulting 'Private Only' to true.", error);
+                    editPrivateOnlyCheckbox.checked = true;
+                }
+
+                editModal.style.display = 'flex';
+            });
+
+            editModalCancel.addEventListener('click', () => {
+                editModal.style.display = 'none';
+                originalUrlToEdit = null;
+            });
+
+            editModalSave.addEventListener('click', async () => {
+                if (!originalUrlToEdit) return;
+
+                const newTitle = editFeedTitleInput.value.trim();
+                const newSectionTitle = editFeedSectionSelect.value;
+                const openArticlesInNewTab = editNewTabCheckbox.checked;
+                let newUrl = editFeedUrlInput.value.trim().replace(/#scrape$/, '');
+
+                if (!newTitle || !newUrl || !newSectionTitle) {
+                    alert('Please provide a title, URL, and section.');
+                    return;
+                }
+
+                if (editScrapeCheckbox && editScrapeCheckbox.checked) {
+                    newUrl += '#scrape';
+                }
+
+                // 1. Remove the old link object
+                const cleanOriginal = originalUrlToEdit.replace(/#scrape$/, '');
+                loadedConfig.forEach(section => {
+                    section.links = section.links.filter(link => {
+                        const saved = (link.feed || link.href || '').replace(/#scrape$/, '');
+                        return saved !== cleanOriginal;
+                    });
+                });
+
+                // 2. Keep standalone .html pages as href; save all feeds with openArticlesInNewTab flag
+                const isLocalPage = newUrl.endsWith('.html');
+                const newLinkObject = isLocalPage
+                    ? { href: newUrl, title: newTitle, ...(openArticlesInNewTab ? { target: '_blank' } : {}) }
+                    : { feed: newUrl, title: newTitle, openArticlesInNewTab };
+
+                // 3. Add the updated link object to the selected section
+                const newSection = loadedConfig.find(s => s.title === newSectionTitle);
+                if (newSection) {
+                    newSection.links.push(newLinkObject);
+                }
+
+                downloadJson(loadedConfig, 'private-links.json');
+
+                // 4. Update public-links.json if applicable
+                try {
+                    const publicConfigResponse = await fetch('public-links.json');
+                    let publicConfig = await publicConfigResponse.json();
+
+                    publicConfig.forEach(section => {
+                        section.links = section.links.filter(link => {
+                            const saved = (link.feed || link.href || '').replace(/#scrape$/, '');
+                            return saved !== cleanOriginal;
+                        });
+                    });
+
+                    if (!editPrivateOnlyCheckbox.checked) {
+                        const publicTargetSection = publicConfig.find(s => s.title === newSectionTitle);
+                        if (publicTargetSection) publicTargetSection.links.push(newLinkObject);
+                    }
+
+                    downloadJson(publicConfig, 'public-links.json');
+                } catch (error) {
+                    console.error('Could not update public-links.json:', error);
+                    alert('Could not update public-links.json. Please check the console.');
+                }
+
+                editModal.style.display = 'none';
+                originalUrlToEdit = null;
+                buildSidebar(loadedConfig, newUrl);
+                setupLinkHandlers();
+                rssInput.value = newUrl;
+                updateFavoriteIconsState(newUrl);
+                alert('Favorite updated. The updated JSON file(s) have been downloaded.');
+            });
+        }
             const editButton = document.getElementById('edit-from-favorites');
             const editModal = document.getElementById('edit-feed-modal');
             const editModalCancel = document.getElementById('edit-modal-cancel-btn');

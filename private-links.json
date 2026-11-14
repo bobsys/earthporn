@@ -65,7 +65,23 @@
       },
       {
         "feed": "https://nypost.com/new-york-rangers/#scrape",
-        "title": "Rags"
+        "title": "Rangers"
+      },
+      {
+        "feed": "https://nypost.com/new-york-knicks/#scrape",
+        "title": "Knicks"
+      },
+      {
+        "feed": "https://nypost.com/new-york-giants/#scrape",
+        "title": "Giants"
+      },
+      {
+        "feed": "https://nypost.com/new-york-jets/#scrape",
+        "title": "Jets"
+      },
+      {
+        "feed": "https://nypost.com/new-york-yankees/#scrape",
+        "title": "Yankees"
       }
     ]
   },
