@@ -24,6 +24,7 @@
             <!-- Article Reading Controls (shown only when viewing an article) -->
             <div id="sidebar-article-controls" style="display: none;">
                 <button id="back-to-feed-btn" type="button">← Back to Feed</button>
+                <button id="reader-view-btn" type="button">📖 Reader View</button>
                 <a id="open-original-link" href="#" target="_blank" rel="noopener">Open Original Page ↗</a>
             </div>
             <img src="illusionUP1.png" alt="Illusion Image" class="sidebar-image" style="display: none;">
@@ -506,27 +507,108 @@
             if (inputGroup) inputGroup.style.display = 'flex';
         }
 
+        async function loadReaderMode(articleUrl, fallbackTitle) {
+            const readerBtn = document.getElementById('reader-view-btn');
+            if (readerBtn) {
+                readerBtn.disabled = true;
+                readerBtn.textContent = 'Loading Reader...';
+            }
+
+            feedContainer.innerHTML = `<div class="reader-article"><p>Extracting article text...</p></div>`;
+            scrollToTop();
+
+            try {
+                const res = await fetch(`/.netlify/functions/read-article?url=${encodeURIComponent(articleUrl)}`);
+                const data = await res.json();
+
+                if (!res.ok || data.error) {
+                    throw new Error(data.details || data.error || 'Could not extract article text.');
+                }
+
+                if (!data.paragraphs || data.paragraphs.length === 0) {
+                    throw new Error('No readable paragraphs found on this page.');
+                }
+
+                const imgHtml = data.image
+                    ? `<img class="reader-hero-img" src="${data.image}" alt="" onerror="this.remove()">`
+                    : '';
+
+                const paragraphsHtml = data.paragraphs
+                    .map(p => `<p>${stripHTML(p)}</p>`)
+                    .join('');
+
+                feedContainer.innerHTML = `
+                    <article class="reader-article">
+                        <div class="reader-meta">${stripHTML(data.siteName || '')}</div>
+                        <h1>${stripHTML(data.title || fallbackTitle)}</h1>
+                        ${imgHtml}
+                        <div class="reader-body">${paragraphsHtml}</div>
+                    </article>
+                `;
+                scrollToTop();
+            } catch (err) {
+                feedContainer.innerHTML = `
+                    <div class="reader-article">
+                        <h2>Reader Mode Unavailable</h2>
+                        <p>${err.message}</p>
+                        <p><a href="${articleUrl}" target="_blank" rel="noopener" style="color: var(--accent-primary);">Open Original Article in New Tab ↗</a></p>
+                    </div>
+                `;
+            } finally {
+                if (readerBtn) {
+                    readerBtn.disabled = false;
+                    readerBtn.textContent = '🌐 Web View';
+                }
+            }
+        }
+
         function openArticleInRightPanel(articleUrl, articleTitle) {
             const articleControls = document.getElementById('sidebar-article-controls');
             const inputGroup = document.querySelector('.input-group');
             const backBtn = document.getElementById('back-to-feed-btn');
+            const readerBtn = document.getElementById('reader-view-btn');
             const originalLink = document.getElementById('open-original-link');
 
-            // 1. Hide the top two rows (title pill & URL input bar)
+            let isReaderMode = false;
+
+            const showIframe = () => {
+                isReaderMode = false;
+                if (readerBtn) readerBtn.textContent = '📖 Reader View';
+                feedContainer.innerHTML = `
+                    <iframe src="${articleUrl}" style="width: 100%; height: calc(100vh - 95px); border: none; border-radius: 8px; background: #fff;"></iframe>
+                `;
+                scrollToTop();
+            };
+
+            // 1. Hide top two rows
             if (feedTitle) feedTitle.style.display = 'none';
             if (inputGroup) inputGroup.style.display = 'none';
 
-            // 2. Populate and show the controls under the title block in the left sidebar
+            // 2. Wire up sidebar buttons
             if (backBtn) {
-                backBtn.textContent = `← Back to ${currentFeedTitle || 'Feed'}`;
+                const activeSidebarTitle = document.querySelector('.sidebar a.active')?.getAttribute('data-title');
+                const labelTitle = currentFeedTitle || activeSidebarTitle || 'Feed';
+                backBtn.textContent = `← Back to ${labelTitle}`;
                 backBtn.onclick = () => {
                     exitArticleView();
-                    const activeSidebarTitle = document.querySelector('.sidebar a.active')?.getAttribute('data-title');
-                    feedTitle.textContent = currentFeedTitle;
+                    feedTitle.textContent = labelTitle;
                     renderFeedItems(currentFeedItems, feedContainer, currentOpenInNewTab);
                     scrollToTop();
                 };
             }
+
+            if (readerBtn) {
+                readerBtn.textContent = '📖 Reader View';
+                readerBtn.onclick = () => {
+                    if (!isReaderMode) {
+                        isReaderMode = true;
+                        loadReaderMode(articleUrl, articleTitle);
+                    } else {
+                        showIframe();
+                    }
+                };
+            }
+
             if (originalLink) {
                 originalLink.href = articleUrl;
             }
@@ -534,11 +616,8 @@
                 articleControls.style.display = 'flex';
             }
 
-            // 3. Render the full-height article iframe in the right panel
-            feedContainer.innerHTML = `
-                <iframe src="${articleUrl}" style="width: 100%; height: calc(100vh - 95px); border: none; border-radius: 8px; background: #fff;"></iframe>
-            `;
-            scrollToTop();
+            // 3. Load default Web View iframe first
+            showIframe();
         }
 
         function renderFeedItems(items, feedContainer, openInNewTab = false) {
