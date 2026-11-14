@@ -94,10 +94,6 @@
         "title": "Old Weather"
       },
       {
-        "feed": "camera.html",
-        "title": "Lake Camera"
-      },
-      {
         "href": "https://bobdolan.net/games/",
         "title": "Bobs Games",
         "target": "_blank"

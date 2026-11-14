@@ -33,19 +33,16 @@ function fetchUrl(url, redirectsLeft = 3) {
             res.on('end', () => resolve({ status: res.statusCode, statusMessage: res.statusMessage, body: data }));
         });
 
-        req.on('timeout', () => {
-            req.destroy(new Error('Request timed out after 8s'));
-        });
-
+        req.on('timeout', () => req.destroy(new Error('Request timed out after 8s')));
         req.on('error', (err) => reject(err));
     });
 }
 
 exports.handler = async (event) => {
-    const feedUrl = event.queryStringParameters?.url;
+    const rawFeedUrl = event.queryStringParameters?.url;
     const isRaw = event.queryStringParameters?.raw === '1';
 
-    if (!feedUrl) {
+    if (!rawFeedUrl) {
         return {
             statusCode: 400,
             headers: { "Access-Control-Allow-Origin": "*" },
@@ -53,10 +50,14 @@ exports.handler = async (event) => {
         };
     }
 
+    // Check if the URL has '#scrape' appended (or ?scrape=1)
+    const isScrape = event.queryStringParameters?.scrape === '1' || rawFeedUrl.endsWith('#scrape');
+    const feedUrl = rawFeedUrl.replace(/#scrape$/, '');
+
     try {
-        // Mode 1: Raw XML mode for earth.html (Reddit)
+        // MODE 1: Raw XML mode for earth.html (Reddit)
         if (isRaw) {
-            const targetUrl = feedUrl.replace('https://www.reddit.com/', 'https://old.reddit.com/');
+            const targetUrl = feedUrl.replace('https://reddit.com', 'https://reddit.com');
             const result = await fetchUrl(targetUrl);
 
             if (result.status < 200 || result.status >= 300) {
@@ -81,7 +82,68 @@ exports.handler = async (event) => {
             };
         }
 
-        // Mode 2: Original JSON parsed mode for your RSS News Reader
+        // MODE 2: Scrape a team hub web page into RSS-style JSON items
+        if (isScrape) {
+            const response = await fetch(feedUrl, {
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36',
+                    'Accept': 'text/html,application/xhtml+xml'
+                }
+            });
+
+            if (!response.ok) {
+                return {
+                    statusCode: response.status,
+                    headers: { "Access-Control-Allow-Origin": "*" },
+                    body: JSON.stringify({ error: `Source error ${response.status}` }),
+                };
+            }
+
+            const html = await response.text();
+            const baseUrl = new URL(feedUrl);
+            const seenUrls = new Set();
+            const items = [];
+
+            const linkRegex = /<a\s+[^>]*href=["']([^"'#]+)["'][^>]*>([\s\S]*?)<\/a>/gi;
+            let match;
+
+            while ((match = linkRegex.exec(html)) !== null) {
+                const href = match[1].trim();
+                const title = match[2].replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+
+                if (title.length < 28 || title.length > 180) continue;
+
+                try {
+                    const fullUrl = new URL(href, baseUrl.origin).toString();
+                    if (!fullUrl.startsWith(baseUrl.origin)) continue;
+                    if (seenUrls.has(fullUrl)) continue;
+                    if (/\/(schedule|roster|stats|standings|tickets|shop|video)\b/i.test(fullUrl)) continue;
+
+                    seenUrls.add(fullUrl);
+                    items.push({
+                        title: title,
+                        link: fullUrl,
+                        pubDate: new Date().toISOString(),
+                        contentSnippet: `Story from ${baseUrl.hostname}`
+                    });
+                } catch (e) {}
+            }
+
+            return {
+                statusCode: 200,
+                headers: {
+                    "Content-Type": "application/json",
+                    "Access-Control-Allow-Origin": "*",
+                    "Cache-Control": "public, max-age=900, s-maxage=900"
+                },
+                body: JSON.stringify({
+                    title: `Stories from ${baseUrl.hostname}`,
+                    items: items.slice(0, 25)
+                }),
+            };
+        }
+
+        // MODE 3: Standard JSON parsed mode for regular RSS feeds
         const response = await fetch(feedUrl, {
             headers: {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
