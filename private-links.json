@@ -3,10 +3,6 @@
     "title": "News Feeds",
     "links": [
       {
-        "feed": "http://qz.com/#scrape",
-        "title": "Quartz"
-      },
-      {
         "feed": "https://www.engadget.com/rss.xml",
         "title": "Tech"
       },
