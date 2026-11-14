@@ -1552,6 +1552,7 @@
 
                 section.links.forEach(link => {
                     const li = document.createElement('li');
+                    const a = document.createElement('a');
                     a.href = link.href || '#';
                     a.textContent = link.title;
                     if (link.feed) {
