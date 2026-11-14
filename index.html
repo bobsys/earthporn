@@ -416,6 +416,7 @@
         async function fetchFeed(url, title, activeLink) {
             currentFetchUrl = url;
             exitArticleView();
+            currentFeedTitle = title || 'Bobs Stuff';
             const inputGroup = document.querySelector('.input-group');
             let loadingIcon = null;
             updateFavoriteIconsState(url);
@@ -520,6 +521,7 @@
                 backBtn.textContent = `← Back to ${currentFeedTitle || 'Feed'}`;
                 backBtn.onclick = () => {
                     exitArticleView();
+                    const activeSidebarTitle = document.querySelector('.sidebar a.active')?.getAttribute('data-title');
                     feedTitle.textContent = currentFeedTitle;
                     renderFeedItems(currentFeedItems, feedContainer, currentOpenInNewTab);
                     scrollToTop();
