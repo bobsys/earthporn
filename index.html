@@ -1152,7 +1152,7 @@
         async function prefetchAllFeeds() {
             const errorContainer = document.getElementById('error');
             const sidebar = document.querySelector('.sidebar');
-            const links = document.querySelectorAll('.sidebar a[data-feed]');
+            const links = Array.from(document.querySelectorAll('.sidebar a[data-feed]'));
             const activeLink = document.querySelector('.sidebar a.active');
             const activeFeedUrl = activeLink ? activeLink.getAttribute('data-feed') : null;
             const activeFeedTitle = activeLink ? activeLink.getAttribute('data-title') : null;
@@ -1162,45 +1162,64 @@
             errorContainer.style.display = 'block';
             errorContainer.classList.add('notification');
 
-            let progress = 0;
             try {
+                // 1. Clear existing cache and collect unique feed URLs
+                const uniqueUrls = new Set();
                 links.forEach(link => {
                     const feedUrl = link.getAttribute('data-feed');
-                    if (getCache(feedUrl)) {
-                        clearCache(feedUrl);
-                        prefetchedFeeds.delete(feedUrl);
+                    if (feedUrl && !feedUrl.endsWith('.html')) {
+                        if (getCache(feedUrl)) {
+                            clearCache(feedUrl);
+                            prefetchedFeeds.delete(feedUrl);
+                        }
+                        uniqueUrls.add(feedUrl);
                     }
                 });
 
-                for (const feedUrl of CRITICAL_FEEDS) {
-                    if (links.length > 0 && !prefetchedFeeds.has(feedUrl)) {
-                        await prefetchFeed(feedUrl);
-                        await new Promise(resolve => setTimeout(resolve, 300)); // Small delay to prevent 429 errors
-                        progress += 100 / links.length;
-                        sidebar.style.setProperty('--progress', `${progress}%`);
-                    }
-                }
-                for (const link of links) {
-                    const feedUrl = link.getAttribute('data-feed');
-                    if (!CRITICAL_FEEDS.includes(feedUrl) && !prefetchedFeeds.has(feedUrl)) {
-                        await prefetchFeed(feedUrl);
-                        await new Promise(resolve => setTimeout(resolve, 300)); // Small delay to prevent 429 errors
-                        progress += 100 / links.length;
-                        sidebar.style.setProperty('--progress', `${progress}%`);
+                // 2. Order critical feeds first, followed by remaining unique feeds
+                const orderedUrls = [
+                    ...CRITICAL_FEEDS.filter(url => uniqueUrls.has(url)),
+                    ...[...uniqueUrls].filter(url => !CRITICAL_FEEDS.includes(url))
+                ];
+
+                const totalFeeds = orderedUrls.length;
+                let completedCount = 0;
+                const BATCH_SIZE = 3;
+
+                // 3. Process in parallel batches of 3
+                for (let i = 0; i < totalFeeds; i += BATCH_SIZE) {
+                    const batch = orderedUrls.slice(i, i + BATCH_SIZE);
+
+                    await Promise.allSettled(
+                        batch.map(async (feedUrl) => {
+                            if (!prefetchedFeeds.has(feedUrl)) {
+                                await prefetchFeed(feedUrl);
+                            }
+                            completedCount++;
+                            const progress = Math.round((completedCount / totalFeeds) * 100);
+                            sidebar.style.setProperty('--progress', `${progress}%`);
+                        })
+                    );
+
+                    // Brief pause between batches to avoid rate-limiting
+                    if (i + BATCH_SIZE < totalFeeds) {
+                        await new Promise(resolve => setTimeout(resolve, 250));
                     }
                 }
 
                 if (activeFeedUrl && activeFeedTitle) {
                     await fetchFeed(activeFeedUrl, activeFeedTitle, activeLink);
                 }
+
+                errorContainer.textContent = 'Feeds refreshed successfully!';
+                errorContainer.classList.add('notification');
             } catch (error) {
                 console.error('Error during prefetchAllFeeds:', error);
                 errorContainer.textContent = 'Failed to refresh feeds. Please try again.';
                 errorContainer.classList.remove('notification');
             } finally {
                 sidebar.classList.remove('loading');
-                errorContainer.textContent = 'Feeds refreshed successfully!';
-                errorContainer.classList.add('notification');
+                sidebar.style.setProperty('--progress', '0%');
                 setTimeout(() => {
                     errorContainer.style.display = 'none';
                     errorContainer.textContent = '';
@@ -1219,13 +1238,14 @@
         }
 
         async function fetchFeed(url, title, activeLink) {
+            currentFetchUrl = url;
             const inputGroup = document.querySelector('.input-group');
             let loadingIcon = null;
             updateFavoriteIconsState(url);
             const iconId = activeLink ? `loading-icon-${encodeURIComponent(url)}` : null;
 
             errorContainer.style.display = 'none';
-            if (url.endsWith('.html')) {
+            if (url && url.endsWith('.html')) {
                 feedTitle.textContent = title;
                 inputGroup.style.display = 'none';
                 renderIframe(feedContainer, url);
@@ -1250,7 +1270,7 @@
             }
 
             if (!url) {
-                errorContainer.innerHTML = 'The requested feed is not available. <button onclick="fetchFeed(\'' + url + '\', \'' + title + '\', null)">Retry</button>';
+                errorContainer.innerHTML = 'The requested feed is not available.';
                 errorContainer.style.display = 'block';
                 if (loadingIcon) loadingIcon.remove();
                 feedTitle.textContent = title || 'Bobs Stuff';
@@ -1258,7 +1278,6 @@
                 return;
             }
 
-            // If cached data exists, display it and stop. No need to re-fetch immediately.
             const cachedItems = getCache(url);
             if (cachedItems && cachedItems.length > 0) {
                 feedTitle.textContent = title;
@@ -1271,17 +1290,24 @@
             try {
                 const items = await _fetchAndParseFeed(url);
                 setCache(url, items);
+
+                // Race-condition guard: if the user clicked another feed while waiting, stop here
+                if (currentFetchUrl !== url) return;
+
                 feedTitle.textContent = title;
                 renderFeedItems(items, feedContainer);
                 scrollToTop();
                 if (activeLink) activeLink.classList.remove('disabled');
             } catch (error) {
+                if (currentFetchUrl !== url) return;
+
                 console.error(`Fetch failed for ${url}:`, error);
-                const isRssFile = /rss|feed|xml|atom|rdf/i.test(url) || url.includes('/rss');
+                const isRssFile = /rss|feed|xml|atom|rdf|#scrape/i.test(url) || url.includes('/rss');
                 if (isRssFile) {
-                    errorContainer.innerHTML = `<b>Feed Error:</b> ${error.message} <br><br><a href="${url}" target="_blank">Open Directly</a> | <button onclick="fetchFeed('${url}', '${title}', null)">Retry</button>`;
+                    const cleanUrl = url.replace(/#scrape$/, '');
+                    errorContainer.innerHTML = `<b>Feed Error:</b> ${error.message} <br><br><a href="${cleanUrl}" target="_blank">Open Directly</a> | <button onclick="fetchFeed('${url}', '${title}', null)">Retry</button>`;
                     errorContainer.style.display = 'block';
-                    feedContainer.innerHTML = ''; 
+                    feedContainer.innerHTML = '';
                 } else {
                     renderIframe(feedContainer, url);
                 }
