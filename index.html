@@ -21,6 +21,11 @@
                     <button class="toggle-sidebar" title="Hide Sidebar" aria-label="Hide sidebar">☰</button>
                 </div>
             </div>
+            <!-- Article Reading Controls (shown only when viewing an article) -->
+            <div id="sidebar-article-controls" style="display: none;">
+                <button id="back-to-feed-btn" type="button">← Back to Feed</button>
+                <a id="open-original-link" href="#" target="_blank" rel="noopener">Open Original Page ↗</a>
+            </div>
             <img src="illusionUP1.png" alt="Illusion Image" class="sidebar-image" style="display: none;">
             <!-- Sidebar content will be dynamically inserted here -->
             <div id="sidebar-content"></div>
@@ -410,6 +415,7 @@
 
         async function fetchFeed(url, title, activeLink) {
             currentFetchUrl = url;
+            exitArticleView();
             const inputGroup = document.querySelector('.input-group');
             let loadingIcon = null;
             updateFavoriteIconsState(url);
@@ -491,22 +497,46 @@
         let currentFeedTitle = '';
         let currentOpenInNewTab = false;
 
+        function exitArticleView() {
+            const articleControls = document.getElementById('sidebar-article-controls');
+            const inputGroup = document.querySelector('.input-group');
+            if (articleControls) articleControls.style.display = 'none';
+            if (feedTitle) feedTitle.style.display = 'block';
+            if (inputGroup) inputGroup.style.display = 'flex';
+        }
+
         function openArticleInRightPanel(articleUrl, articleTitle) {
-            feedTitle.textContent = articleTitle;
+            const articleControls = document.getElementById('sidebar-article-controls');
+            const inputGroup = document.querySelector('.input-group');
+            const backBtn = document.getElementById('back-to-feed-btn');
+            const originalLink = document.getElementById('open-original-link');
+
+            // 1. Hide the top two rows (title pill & URL input bar)
+            if (feedTitle) feedTitle.style.display = 'none';
+            if (inputGroup) inputGroup.style.display = 'none';
+
+            // 2. Populate and show the controls under the title block in the left sidebar
+            if (backBtn) {
+                backBtn.textContent = `← Back to ${currentFeedTitle || 'Feed'}`;
+                backBtn.onclick = () => {
+                    exitArticleView();
+                    feedTitle.textContent = currentFeedTitle;
+                    renderFeedItems(currentFeedItems, feedContainer, currentOpenInNewTab);
+                    scrollToTop();
+                };
+            }
+            if (originalLink) {
+                originalLink.href = articleUrl;
+            }
+            if (articleControls) {
+                articleControls.style.display = 'flex';
+            }
+
+            // 3. Render the full-height article iframe in the right panel
             feedContainer.innerHTML = `
-                <div style="margin-bottom: 12px; display: flex; gap: 10px; align-items: center;">
-                    <button id="back-to-feed-btn" type="button">← Back to ${currentFeedTitle || 'Feed'}</button>
-                    <a href="${articleUrl}" target="_blank" rel="noopener" style="color: #4a90e2; font-size: 0.9em;">Open Original Page ↗</a>
-                </div>
-                <iframe src="${articleUrl}" style="width: 100%; height: calc(100vh - 210px); border: none; border-radius: 6px; background: #fff;"></iframe>
+                <iframe src="${articleUrl}" style="width: 100%; height: calc(100vh - 95px); border: none; border-radius: 8px; background: #fff;"></iframe>
             `;
             scrollToTop();
-
-            document.getElementById('back-to-feed-btn')?.addEventListener('click', () => {
-                feedTitle.textContent = currentFeedTitle;
-                renderFeedItems(currentFeedItems, feedContainer, currentOpenInNewTab);
-                scrollToTop();
-            });
         }
 
         function renderFeedItems(items, feedContainer, openInNewTab = false) {
