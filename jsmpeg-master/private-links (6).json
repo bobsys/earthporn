@@ -1,0 +1,127 @@
+[
+  {
+    "title": "News Feeds",
+    "links": [
+      {
+        "feed": "http://qz.com/feed",
+        "title": "Quartz"
+      },
+      {
+        "feed": "https://www.engadget.com/rss.xml",
+        "title": "Tech"
+      },
+      {
+        "feed": "https://www.zmescience.com/feed/",
+        "title": "Science"
+      },
+      {
+        "feed": "https://bg.raindrop.io/rss/public/46406138",
+        "title": "Boblog"
+      },
+      {
+        "feed": "https://feeds.npr.org/1014/rss.xml",
+        "title": "NPR Politics"
+      },
+      {
+        "feed": "https://feeds.a.dj.com/rss/RSSWorldNews.xml",
+        "title": "Wall St. Journal"
+      },
+      {
+        "feed": "https://www.allsides.com/news/rss",
+        "title": "All Sides"
+      },
+      {
+        "feed": "http://feeds.bbci.co.uk/news/rss.xml",
+        "title": "BBC News"
+      },
+      {
+        "feed": "http://feeds.foxnews.com/foxnews/latest",
+        "title": "Fox News"
+      },
+      {
+        "feed": "https://www.realclearpolitics.com/index.xml",
+        "title": "Real Clear"
+      },
+      {
+        "feed": "https://trumpstruth.org/feed",
+        "title": "trump Posts"
+      },
+      {
+        "feed": "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en",
+        "title": "Google News"
+      },
+      {
+        "feed": "https://nypost.com/new-york-rangers/#scrape",
+        "title": "Rags"
+      }
+    ]
+  },
+  {
+    "title": "Sports Feeds",
+    "links": [
+      {
+        "feed": "https://elitesportsny.com/category/nyc-teams/c-new-york-giants/feed",
+        "title": "Giants"
+      },
+      {
+        "feed": "https://elitesportsny.com/category/nyc-teams/g-new-york-rangers/feedNew York",
+        "title": "Rangers"
+      },
+      {
+        "feed": "https://google.com+'New+York+Knicks'+when:7d&hl=en-US&gl=US&ceid=US:en",
+        "title": "Knicks"
+      },
+      {
+        "feed": "https://elitesportsny.com/category/nyc-teams/a-new-york-yankees/feedNew York",
+        "title": "Yankees"
+      },
+      {
+        "feed": "https://www.sportingnews.com/us/rss",
+        "title": "Sporting News"
+      },
+      {
+        "feed": "https://sports.yahoo.com/rss/",
+        "title": "Yahoo"
+      }
+    ]
+  },
+  {
+    "title": "Links",
+    "links": [
+      {
+        "href": "https://www.wunderground.com/dashboard/pws/KNYROCHE70",
+        "title": "Weather Station",
+        "target": "_blank"
+      },
+      {
+        "feed": "weatherstar.html",
+        "title": "Old Weather"
+      },
+      {
+        "href": "https://bobdolan.net/games/",
+        "title": "Bobs Games",
+        "target": "_blank"
+      },
+      {
+        "href": "https://bobdolan.net/debunkify/",
+        "title": "Debunkify",
+        "target": "_blank"
+      },
+      {
+        "href": "https://bobdolan.net/resume.html/",
+        "title": "My Resume",
+        "target": "_blank"
+      },
+      {
+        "href": "https://bobdolan.net/earth.html/",
+        "title": "Earth",
+        "target": "_blank"
+      },
+      {
+        "href": "https://www.wunderground.com/wundermap?lat=43.16104889&lon=-77.61962891&zoom=10",
+        "title": "Radar",
+        "target": "_blank"
+      }
+    ]
+  }
+]

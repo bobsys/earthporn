@@ -56,28 +56,16 @@
     "title": "Sports Feeds",
     "links": [
       {
-        "feed": "https://elitesportsny.com/category/nyc-teams/c-new-york-giants/feed",
-        "title": "Giants"
-      },
-      {
-        "feed": "https://elitesportsny.com/category/nyc-teams/g-new-york-rangers/feedNew York",
-        "title": "Rangers"
-      },
-      {
-        "feed": "https://google.com+'New+York+Knicks'+when:7d&hl=en-US&gl=US&ceid=US:en",
-        "title": "Knicks"
-      },
-      {
-        "feed": "https://elitesportsny.com/category/nyc-teams/a-new-york-yankees/feedNew York",
-        "title": "Yankees"
-      },
-      {
         "feed": "https://www.sportingnews.com/us/rss",
         "title": "Sporting News"
       },
       {
         "feed": "https://sports.yahoo.com/rss/",
         "title": "Yahoo"
+      },
+      {
+        "feed": "https://nypost.com/new-york-rangers/#scrape",
+        "title": "Rags"
       }
     ]
   },

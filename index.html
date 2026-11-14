@@ -993,7 +993,9 @@
          */
         async function _fetchAndParseFeed(url, attempt = 1) {
             // Call your new Netlify Function endpoint
-            const apiUrl = `/.netlify/functions/rss-proxy?url=${encodeURIComponent(url)}`;
+            const isScrape = url.endsWith('#scrape');
+            const endpoint = isScrape ? '/.netlify/functions/scrape-page' : '/.netlify/functions/rss-proxy';
+            const apiUrl = `${endpoint}?url=${encodeURIComponent(url)}`;
             try {
                 const response = await fetch(apiUrl);
 
