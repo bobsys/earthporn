@@ -887,6 +887,10 @@
                 <input type="checkbox" id="new-tab-checkbox" style="width: auto; margin-right: 8px;">
                 <label for="new-tab-checkbox">Open in new tab</label>
             </div>
+            <div style="margin-bottom: 16px; display: flex; align-items: center;">
+                <input type="checkbox" id="scrape-page-checkbox" style="width: auto; margin-right: 8px;">
+                <label for="scrape-page-checkbox">Scrape stories from web page (non-RSS)</label>
+            </div>
             <div class="modal-buttons">
                 <button id="modal-cancel-btn">Cancel</button>
                 <button id="modal-save-btn">Save</button>
@@ -911,6 +915,10 @@
             <div style="margin-bottom: 16px; display: flex; align-items: center;">
                 <input type="checkbox" id="edit-new-tab-checkbox" style="width: auto; margin-right: 8px;">
                 <label for="edit-new-tab-checkbox">Open in new tab</label>
+            </div>
+            <div style="margin-bottom: 16px; display: flex; align-items: center;">
+                <input type="checkbox" id="scrape-page-checkbox" style="width: auto; margin-right: 8px;">
+                <label for="scrape-page-checkbox">Scrape stories from web page (non-RSS)</label>
             </div>
             <div class="modal-buttons">
                 <button id="edit-modal-cancel-btn">Cancel</button>
@@ -1435,7 +1443,8 @@
         async function initializePage() {
             const urlParams = new URLSearchParams(window.location.search);
             const view = urlParams.get('view');
-            const configFile = view === 'priv' ? 'private-links.json' : 'public-links.json';
+            //const configFile = view === 'priv' ? 'private-links.json' : 'public-links.json';
+            const configFile = 'private-links.json';
             const inputGroup = document.querySelector('.input-group');
 
             try {
@@ -1624,6 +1633,8 @@
             editButton.title = isFavorite ? 'Edit Favorite' : 'Not in Favorites';
         }
 
+        //##############################################################################
+
         function setupFavoritesHandler() {
             initAddFavoriteModal();
             initEditFavoriteModal();
@@ -1638,19 +1649,31 @@
             const newFeedTitleInput = document.getElementById('new-feed-title');
             const privateOnlyCheckbox = document.getElementById('private-only-checkbox');
             const newTabCheckbox = document.getElementById('new-tab-checkbox');
+            const scrapeCheckbox = document.getElementById('scrape-page-checkbox');
             const newFeedSectionSelect = document.getElementById('new-feed-section');
+
+            // Automatically uncheck "Scrape" if "Open in new tab" is checked
+            newTabCheckbox?.addEventListener('change', () => {
+                if (newTabCheckbox.checked && scrapeCheckbox) {
+                    scrapeCheckbox.checked = false;
+                }
+            });
 
             heartButton.addEventListener('click', () => {
                 if (heartButton.disabled) return;
 
-                // Populate the section dropdown
-                newFeedSectionSelect.innerHTML = ''; // Clear existing options
+                newFeedSectionSelect.innerHTML = '';
                 loadedConfig.forEach(section => {
                     const option = document.createElement('option');
                     option.value = section.title;
                     option.textContent = section.title;
                     newFeedSectionSelect.appendChild(option);
                 });
+
+                // Pre-check the scrape box if the user already typed #scrape in the URL input
+                if (scrapeCheckbox) {
+                    scrapeCheckbox.checked = rssInput.value.trim().endsWith('#scrape');
+                }
 
                 modal.style.display = 'flex';
                 newFeedTitleInput.focus();
@@ -1659,33 +1682,36 @@
             modalCancel.addEventListener('click', () => {
                 modal.style.display = 'none';
                 newFeedTitleInput.value = '';
-                newTabCheckbox.checked = false; // Reset checkbox on cancel
+                newTabCheckbox.checked = false;
+                if (scrapeCheckbox) scrapeCheckbox.checked = false;
             });
 
             modalSave.addEventListener('click', async () => {
                 const newTitle = newFeedTitleInput.value.trim();
                 const selectedSectionTitle = newFeedSectionSelect.value;
-                const newUrl = rssInput.value.trim();
+                let newUrl = rssInput.value.trim().replace(/#scrape$/, '');
 
                 if (!newTitle || !newUrl || !selectedSectionTitle) {
                     alert('Please provide a title and select a section.');
                     return;
                 }
 
-                // Find the selected section to add the new link
+                if (scrapeCheckbox && scrapeCheckbox.checked && !newTabCheckbox.checked) {
+                    newUrl += '#scrape';
+                }
+
+                const newLinkObject = newTabCheckbox.checked
+                    ? { href: newUrl, title: newTitle, target: '_blank' }
+                    : { feed: newUrl, title: newTitle };
+
                 const targetSection = loadedConfig.find(s => s.title === selectedSectionTitle);
                 if (targetSection) {
-                    let newLinkObject;
-                    if (newTabCheckbox.checked) {
-                        newLinkObject = { href: newUrl, title: newTitle, target: '_blank' };
-                    } else {
-                        newLinkObject = { feed: newUrl, title: newTitle };
-                    }
                     targetSection.links.push(newLinkObject);
                 } else {
                     alert('Could not find the selected section. Please try again.');
                     return;
                 }
+
                 // Always save to the private config
                 downloadJson(loadedConfig, 'private-links.json');
 
@@ -1698,12 +1724,6 @@
 
                         const publicTargetSection = publicConfig.find(s => s.title === selectedSectionTitle);
                         if (publicTargetSection) {
-                            let newLinkObject;
-                            if (newTabCheckbox.checked) {
-                                newLinkObject = { href: newUrl, title: newTitle, target: '_blank' };
-                            } else {
-                                newLinkObject = { feed: newUrl, title: newTitle };
-                            }
                             publicTargetSection.links.push(newLinkObject);
                             downloadJson(publicConfig, 'public-links.json');
                         } else {
@@ -1714,15 +1734,37 @@
                         alert("Failed to load and update public-links.json. Please check the console for errors.");
                     }
                 }
-                const a = document.createElement('a');
 
                 modal.style.display = 'none';
                 newFeedTitleInput.value = '';
-                newTabCheckbox.checked = false; // Reset checkbox after save
-                // Re-build the sidebar to show the new link immediately
+                newTabCheckbox.checked = false;
+                if (scrapeCheckbox) scrapeCheckbox.checked = false;
+
+                rssInput.value = newUrl;
                 buildSidebar(loadedConfig, newUrl);
                 setupLinkHandlers();
-                updateFavoriteIconsState(newUrl); // Update icon states
+                updateFavoriteIconsState(newUrl);
+            });
+        }
+
+                function initEditFavoriteModal() {
+            const editButton = document.getElementById('edit-from-favorites');
+            const editModal = document.getElementById('edit-feed-modal');
+            const editModalCancel = document.getElementById('edit-modal-cancel-btn');
+            const editModalSave = document.getElementById('edit-modal-save-btn');
+            const editFeedTitleInput = document.getElementById('edit-feed-title');
+            const editFeedUrlInput = document.getElementById('edit-feed-url');
+            const editFeedSectionSelect = document.getElementById('edit-feed-section');
+            const editPrivateOnlyCheckbox = document.getElementById('edit-private-only-checkbox');
+            const editNewTabCheckbox = document.getElementById('edit-new-tab-checkbox');
+            const editScrapeCheckbox = document.getElementById('edit-scrape-page-checkbox');
+
+            let originalUrlToEdit = null;
+
+            editNewTabCheckbox?.addEventListener('change', () => {
+                if (editNewTabCheckbox.checked && editScrapeCheckbox) {
+                    editScrapeCheckbox.checked = false;
+                }
             });
 
             editButton.addEventListener('click', async () => {
@@ -1735,7 +1777,9 @@
                 let sectionOfLink = null;
 
                 for (const section of loadedConfig) {
-                    const foundLink = section.links.find(link => link.feed === originalUrlToEdit || link.href === originalUrlToEdit);
+                    const foundLink = section.links.find(
+                        link => link.feed === originalUrlToEdit || link.href === originalUrlToEdit
+                    );
                     if (foundLink) {
                         linkToEdit = foundLink;
                         sectionOfLink = section;
@@ -1748,12 +1792,16 @@
                     return;
                 }
 
-                // Pre-populate the edit modal
-                editFeedTitleInput.value = linkToEdit.title;
-                editFeedUrlInput.value = linkToEdit.feed || linkToEdit.href;
-                editNewTabCheckbox.checked = !!linkToEdit.target;
+                const rawSavedUrl = linkToEdit.feed || linkToEdit.href || '';
+                const hasScrapeFlag = rawSavedUrl.endsWith('#scrape');
 
-                // Populate and set the section dropdown
+                editFeedTitleInput.value = linkToEdit.title;
+                editFeedUrlInput.value = rawSavedUrl.replace(/#scrape$/, '');
+                editNewTabCheckbox.checked = !!linkToEdit.target;
+                if (editScrapeCheckbox) {
+                    editScrapeCheckbox.checked = hasScrapeFlag;
+                }
+
                 editFeedSectionSelect.innerHTML = '';
                 loadedConfig.forEach(section => {
                     const option = document.createElement('option');
@@ -1763,20 +1811,19 @@
                 });
                 editFeedSectionSelect.value = sectionOfLink.title;
 
-                // Pre-populate the "Private Only" checkbox
                 try {
                     const publicConfigResponse = await fetch('public-links.json');
                     const publicConfig = await publicConfigResponse.json();
                     const isInPublic = publicConfig.some(section =>
-                        section.links.some(link => link.feed === originalUrlToEdit || link.href === originalUrlToEdit)
+                        section.links.some(
+                            link => link.feed === originalUrlToEdit || link.href === originalUrlToEdit
+                        )
                     );
                     editPrivateOnlyCheckbox.checked = !isInPublic;
                 } catch (error) {
                     console.error("Could not check public config, defaulting 'Private Only' to true.", error);
-                    // Default to checked if the public file can't be read for some reason
                     editPrivateOnlyCheckbox.checked = true;
                 }
-
 
                 editModal.style.display = 'flex';
             });
@@ -1790,40 +1837,46 @@
                 if (!originalUrlToEdit) return;
 
                 const newTitle = editFeedTitleInput.value.trim();
-                const newUrl = editFeedUrlInput.value.trim();
                 const newSectionTitle = editFeedSectionSelect.value;
                 const opensInNewTab = editNewTabCheckbox.checked;
+                let newUrl = editFeedUrlInput.value.trim().replace(/#scrape$/, '');
 
+                if (!newTitle || !newUrl || !newSectionTitle) {
+                    alert('Please provide a title, URL, and section.');
+                    return;
+                }
 
-                // 1. Remove the old link object
+                if (editScrapeCheckbox && editScrapeCheckbox.checked && !opensInNewTab) {
+                    newUrl += '#scrape';
+                }
+
                 loadedConfig.forEach(section => {
-                    section.links = section.links.filter(link => (link.feed !== originalUrlToEdit && link.href !== originalUrlToEdit));
+                    section.links = section.links.filter(
+                        link => link.feed !== originalUrlToEdit && link.href !== originalUrlToEdit
+                    );
                 });
 
-                // 2. Create the new link object
                 const newLinkObject = opensInNewTab
                     ? { href: newUrl, title: newTitle, target: '_blank' }
                     : { feed: newUrl, title: newTitle };
 
-                // 3. Add the new link object to the correct section
                 const newSection = loadedConfig.find(s => s.title === newSectionTitle);
                 if (newSection) {
                     newSection.links.push(newLinkObject);
                 }
-                // Always save the private config
+
                 downloadJson(loadedConfig, 'private-links.json');
 
-                // Now handle the public config based on the checkbox
                 try {
                     const publicConfigResponse = await fetch('public-links.json');
                     let publicConfig = await publicConfigResponse.json();
 
-                    // First, always remove the original link from public config
                     publicConfig.forEach(section => {
-                        section.links = section.links.filter(link => link.feed !== originalUrlToEdit && link.href !== originalUrlToEdit);
+                        section.links = section.links.filter(
+                            link => link.feed !== originalUrlToEdit && link.href !== originalUrlToEdit
+                        );
                     });
 
-                    // If "Private Only" is NOT checked, add the new version back
                     if (!editPrivateOnlyCheckbox.checked) {
                         const publicTargetSection = publicConfig.find(s => s.title === newSectionTitle);
                         if (publicTargetSection) publicTargetSection.links.push(newLinkObject);
@@ -1831,16 +1884,20 @@
 
                     downloadJson(publicConfig, 'public-links.json');
                 } catch (error) {
+                    console.error('Could not update public-links.json:', error);
                     alert('Could not update public-links.json. Please check the console.');
                 }
+
                 editModal.style.display = 'none';
+                originalUrlToEdit = null;
                 buildSidebar(loadedConfig, newUrl);
                 setupLinkHandlers();
-                rssInput.value = newUrl; // Update the input field
+                rssInput.value = newUrl;
                 updateFavoriteIconsState(newUrl);
-                alert('Favorite updated. The updated private-links.json has been downloaded.');
+                alert('Favorite updated. The updated JSON file(s) have been downloaded.');
             });
         }
+        //##############################################################################
 
         function initDeleteFavorite() {
             const deleteButton = document.getElementById('delete-from-favorites');
@@ -1850,28 +1907,20 @@
                 const urlToDelete = rssInput.value.trim();
                 if (!urlToDelete) return;
 
-                if (window.confirm(`Are you sure you want to remove this feed from your favorites?`)) {
+                if (window.confirm('Are you sure you want to remove this feed from your favorites?')) {
                     let linkRemoved = false;
                     loadedConfig.forEach(section => {
                         const initialLinkCount = section.links.length;
-                        section.links = section.links.filter(link => link.feed !== urlToDelete && link.href !== urlToDelete);
+                        section.links = section.links.filter(
+                            link => link.feed !== urlToDelete && link.href !== urlToDelete
+                        );
                         if (section.links.length < initialLinkCount) {
                             linkRemoved = true;
                         }
                     });
 
                     if (linkRemoved) {
-                        // Trigger download of the updated private-links.json
-                        const updatedJsonString = JSON.stringify(loadedConfig, null, 2);
-                        const blob = new Blob([updatedJsonString], { type: 'application/json' });
-                        const a = document.createElement('a');
-                        a.href = URL.createObjectURL(blob);
-                        a.download = 'private-links.json';
-                        document.body.appendChild(a);
-                        a.click();
-                        document.body.removeChild(a);
-
-                        // Refresh the UI
+                        downloadJson(loadedConfig, 'private-links.json');
                         buildSidebar(loadedConfig);
                         setupLinkHandlers();
                         updateFavoriteIconsState(urlToDelete);
@@ -1880,6 +1929,7 @@
                 }
             });
         }
+        //##############################################################################
 
         // Set dynamic version date in footer
         (function setVersionDate() {
