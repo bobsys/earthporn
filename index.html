@@ -1022,6 +1022,12 @@
 
                 const data = await response.json();
 
+                // Automatic fallback: if rss-proxy got an HTML page instead of XML, retry via scrape-page!
+                if (!isScrape && data.error === 'Parse Error') {
+                    console.log(`URL is HTML rather than XML, switching to scrape-page for ${url}`);
+                    return _fetchAndParseFeed(`${url}#scrape`, attempt);
+                }
+
                 // Handle cases where the proxy returns a 200 but the body contains an error object
                 if (data.error) {
                     throw new Error(`${data.error}: ${data.details || 'Unknown details'}`);

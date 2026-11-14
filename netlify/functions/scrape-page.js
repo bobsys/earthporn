@@ -81,6 +81,9 @@ exports.handler = async (event) => {
                 const fullUrl = new URL(href, base.origin).toString();
                 if (!fullUrl.startsWith(base.origin) || seen.has(fullUrl)) continue;
                 if (/\/(schedule|roster|stats|standings|tickets|shop|video|player|_\/id)\b/i.test(fullUrl)) continue;
+                if (base.hostname.includes('nypost.com') && !/\/20\d{2}\/\d{2}\/\d{2}\//.test(fullUrl)) {
+                    continue;
+                }
 
                 const win = html.slice(Math.max(0, match.index - 700), Math.min(html.length, match.index + 700));
                 const imgMatch = win.match(/<img[^>]+(?:src|data-src)=["'](?<src>https?:\/\/[^"']+)["']/i);
