@@ -861,7 +861,7 @@
             <h1 id="feed-title">Bobs Stuff</h1>
             <div class="input-group">
                 <input type="text" id="rssUrl" placeholder="Enter RSS feed URL (e.g., https://example.com/feed.xml)">
-                <button id="load-feed-btn" onclick="fetchFeed(document.getElementById('rssUrl').value.trim(), 'Custom Feed', null)">Load Feed</button>
+                <button id="load-feed-btn" type="button">Load Feed</button>
                 <button id="add-to-favorites" title="Add to Favorites" disabled>❤️</button>
                 <button id="edit-from-favorites" title="Edit Favorite" disabled>✏️</button>
                 <button id="delete-from-favorites" title="Delete from Favorites" disabled>🗑️</button>
@@ -1086,38 +1086,6 @@
                 }
                 throw error;
             }
-        }
-
-        // New helper to parse raw XML document into our app's item format
-        function parseRssDocument(xmlDoc) {
-            const items = [];
-            const nodes = xmlDoc.querySelectorAll('item, entry');
-            nodes.forEach(node => {
-                const getTag = (name) => {
-                    const el = node.querySelector(name);
-                    return el ? el.textContent : '';
-                };
-                
-                // Handle common image patterns in raw XML
-                let img = '';
-                const media = node.getElementsByTagName('media:content')[0] || node.getElementsByTagName('media:thumbnail')[0] || node.getElementsByTagName('enclosure')[0];
-                if (media) img = media.getAttribute('url');
-                if (!img) {
-                    const desc = getTag('description') + getTag('content');
-                    const match = desc.match(/<img[^>]+src="([^">]+)"/i);
-                    if (match) img = match[1];
-                }
-
-                items.push({
-                    title: stripHTML(getTag('title') || 'No title'),
-                    link: stripHTML(getTag('link') || node.querySelector('link')?.getAttribute('href') || '#'),
-                    description: sanitizeDescription(getTag('description') || getTag('content') || getTag('summary')),
-                    pubDate: stripHTML(getTag('pubDate') || getTag('published') || getTag('updated') || 'No date'),
-                    image: img
-                });
-            });
-            if (items.length === 0) throw new Error("No feed items found in raw XML.");
-            return items;
         }
 
         function renderPlaceholders(container, count = 3) {
@@ -1453,54 +1421,26 @@
         sidebarOverlay.addEventListener('click', handleInteraction);
         sidebarOverlay.addEventListener('touchstart', handleInteraction, { passive: false });
 
-        rssInput.addEventListener('keypress', (e) => {
+        function triggerCustomFeedLoad() {
+            const url = rssInput.value.trim();
+            if (url) {
+                fetchFeed(url, 'Custom Feed', null);
+            }
+        }
+
+        rssInput.addEventListener('keydown', (e) => {
             if (e.key === 'Enter') {
-                fetchFeed(rssInput.value.trim(), 'Custom Feed', null);
+                e.preventDefault();
+                triggerCustomFeedLoad();
             }
         });
 
-        document.getElementById('load-feed-btn').addEventListener('click', () => {
-            fetchFeed(rssInput.value.trim(), 'Custom Feed', null);
+        document.getElementById('load-feed-btn').addEventListener('click', triggerCustomFeedLoad);
+        document.getElementById('sidebar-content').addEventListener('click', (e) => {
+            const link = e.target.closest('a');
+            if (!link) return;
+            handleSidebarClick(e, link);
         });
-        document.querySelector('button').addEventListener('touchstart', () => {
-            fetchFeed(rssInput.value.trim(), 'Custom Feed', null);
-        }, { passive: false });
-
-        // Handle sidebar link clicks
-        document.querySelectorAll('.sidebar a').forEach(link => {
-            const handler = (e) => {
-                const feedUrl = link.getAttribute('data-feed');
-                const feedTitle = link.getAttribute('data-title');
-
-                if (!feedUrl) return;
-
-                e.preventDefault();
-                if (!prefetchedFeeds.has(feedUrl)) {
-                    const errorContainer = document.getElementById('error');
-                    errorContainer.innerHTML = 'This feed is still loading. Please wait or <button onclick="fetchFeed(\'' + feedUrl + '\', \'' + feedTitle + '\', null)">try now</button>.';
-                    errorContainer.style.display = 'block';
-                    return;
-                }
-
-                document.querySelectorAll('.sidebar a').forEach(l => l.classList.remove('active'));
-                link.classList.add('active');
-                rssInput.value = feedUrl;
-                fetchFeed(feedUrl, feedTitle, link);
-                if (window.innerWidth <= 600) {
-                    sidebar.classList.add('sidebar-hidden');
-                    sidebarOverlay.classList.remove('active');
-                    headerControls.appendChild(toggleModeButton);
-                    headerControls.appendChild(refreshFeedsButton);
-                    headerControls.appendChild(toggleSidebarButton);
-                    toggleSidebarButton.title = 'Show Sidebar';
-                    toggleSidebarButton.setAttribute('aria-label', 'Show sidebar');
-                    localStorage.setItem('sidebarState', 'hidden');
-                }
-            };
-            link.addEventListener('click', handler);
-            link.addEventListener('touchstart', handler, { passive: false });
-        });
-
         // Refresh current feed on window focus
         window.onfocus = () => {
             const activeLink = document.querySelector('.sidebar a.active');
@@ -1550,7 +1490,6 @@
                 const sections = await loadJSON(configFile);
                 loadedConfig = sections; // Store the loaded config globally
                 buildSidebar(sections);
-                setupLinkHandlers();
 
                 // Initialize with the first available feed
                 const firstFeedLink = document.querySelector('.sidebar a[data-feed]');
@@ -1613,7 +1552,6 @@
 
                 section.links.forEach(link => {
                     const li = document.createElement('li');
-                    const a = document.createElement('a');
                     a.href = link.href || '#';
                     a.textContent = link.title;
                     if (link.feed) {
@@ -1636,13 +1574,6 @@
                 sidebarContent.appendChild(ul);
             });
             CRITICAL_FEEDS = allFeeds; // All feeds are now considered critical for prefetching
-        }
-
-        function setupLinkHandlers() {
-            document.querySelectorAll('.sidebar a').forEach(link => {
-                link.addEventListener('click', (e) => handleSidebarClick(e, link));
-                link.addEventListener('touchstart', (e) => handleSidebarClick(e, link), { passive: false });
-            });
         }
 
         function handleSidebarClick(e, link) {
@@ -1820,7 +1751,6 @@
 
                 rssInput.value = newUrl;
                 buildSidebar(loadedConfig, newUrl);
-                setupLinkHandlers();
                 updateFavoriteIconsState(newUrl);
             });
         }
@@ -1978,7 +1908,6 @@
                 editModal.style.display = 'none';
                 originalUrlToEdit = null;
                 buildSidebar(loadedConfig, newUrl);
-                setupLinkHandlers();
                 rssInput.value = newUrl;
                 updateFavoriteIconsState(newUrl);
                 alert('Favorite updated. The updated JSON file(s) have been downloaded.');
