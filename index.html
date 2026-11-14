@@ -936,7 +936,7 @@
 
     (function() {
         // --- APPLICATION VERSION ---
-        const APP_VERSION = "05142026";
+        const APP_VERSION = "11142026";
 
         // --- STATE MANAGEMENT ---
         let prefetchedFeeds = new Set();
@@ -954,6 +954,38 @@
 
         const MAX_RETRY_ATTEMPTS = 2;
         const INITIAL_RETRY_DELAY_MS = 1000;
+
+        function formatHumanDate(rawDate) {
+            if (!rawDate || rawDate === 'No date') return 'Date unavailable';
+            const parsed = new Date(rawDate);
+            if (isNaN(parsed.getTime())) return rawDate;
+
+            const now = new Date();
+            const diffMs = now - parsed;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+
+            if (diffMins >= 0 && diffMins < 60) {
+                return diffMins <= 1 ? 'Just now' : `${diffMins} minutes ago`;
+            }
+            if (diffHours >= 0 && diffHours < 24 && now.getDate() === parsed.getDate()) {
+                return `Today at ${parsed.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+            }
+
+            const yesterday = new Date(now);
+            yesterday.setDate(now.getDate() - 1);
+            if (yesterday.toDateString() === parsed.toDateString()) {
+                return `Yesterday at ${parsed.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+            }
+
+            return parsed.toLocaleDateString(undefined, {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+                hour: 'numeric',
+                minute: '2-digit'
+            });
+        }
 
         /**
          * Internal helper to fetch and parse RSS/XML from the proxy.
@@ -1028,7 +1060,7 @@
                         link: stripHTML(item.link || '#'),
                         // Expanded fallback for different RSS parser formats
                         description: sanitizeDescription(item.description || item.content || item.contentSnippet || item.summary),
-                        pubDate: stripHTML(item.pubDate || 'No date'),
+                        pubDate: formatHumanDate(stripHTML(item.pubDate || '')),
                         image: extractedImg
                     };
                 });
