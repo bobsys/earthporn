@@ -232,7 +232,7 @@ body {
 #article-header-bar {
     position: sticky;
     top: 0;
-    z-index: 20;
+    z-index: 30;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -333,6 +333,11 @@ body {
     position: sticky;
     top: 12px;
     z-index: 10;
+    pointer-events: none;
+}
+
+.header-controls button {
+    pointer-events: auto; /* Keeps sidebar/theme buttons clickable when moved here */
 }
 
 h1#feed-title {
