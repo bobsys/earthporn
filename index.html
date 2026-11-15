@@ -351,7 +351,7 @@
             }
         }
 
-        async function prefetchAllFeeds(skipUrl = null) {
+        async function prefetchAllFeeds(forceRefresh = true) {
             const errorContainer = document.getElementById('error');
             const sidebar = document.querySelector('.sidebar');
             const links = Array.from(document.querySelectorAll('.sidebar a[data-feed]'));
@@ -359,26 +359,36 @@
             const activeFeedUrl = activeLink ? activeLink.getAttribute('data-feed') : null;
             const activeFeedTitle = activeLink ? activeLink.getAttribute('data-title') : null;
 
+            // 1. Collect unique feed URLs that actually need fetching
+            const uniqueUrls = new Set();
+            links.forEach(link => {
+                const feedUrl = link.getAttribute('data-feed');
+                if (!feedUrl || feedUrl.endsWith('.html')) return;
+
+                const cached = getCache(feedUrl);
+                if (!forceRefresh && cached && cached.length > 0) {
+                    // Already cached: mark as ready and enable the sidebar link immediately
+                    prefetchedFeeds.add(feedUrl);
+                    link.classList.remove('disabled');
+                    return;
+                }
+
+                if (forceRefresh && cached) {
+                    clearCache(feedUrl);
+                    prefetchedFeeds.delete(feedUrl);
+                }
+                uniqueUrls.add(feedUrl);
+            });
+
+            // If everything was already cached on startup, stop quietly with zero network calls
+            if (uniqueUrls.size === 0) return;
+
             sidebar.classList.add('loading');
-            errorContainer.textContent = 'Refreshing feeds...';
+            errorContainer.textContent = forceRefresh ? 'Refreshing feeds...' : 'Loading uncached feeds...';
             errorContainer.style.display = 'block';
             errorContainer.classList.add('notification');
 
             try {
-                // 1. Clear existing cache and collect unique feed URLs (excluding skipUrl)
-                const uniqueUrls = new Set();
-                links.forEach(link => {
-                    const feedUrl = link.getAttribute('data-feed');
-                    if (feedUrl && !feedUrl.endsWith('.html') && feedUrl !== skipUrl) {
-                        if (getCache(feedUrl)) {
-                            clearCache(feedUrl);
-                            prefetchedFeeds.delete(feedUrl);
-                        }
-                        uniqueUrls.add(feedUrl);
-                    }
-                });
-
-                // 2. Order critical feeds first, followed by remaining unique feeds
                 const orderedUrls = [
                     ...CRITICAL_FEEDS.filter(url => uniqueUrls.has(url)),
                     ...[...uniqueUrls].filter(url => !CRITICAL_FEEDS.includes(url))
@@ -388,7 +398,6 @@
                 let completedCount = 0;
                 const BATCH_SIZE = 3;
 
-                // 3. Process in parallel batches of 3
                 for (let i = 0; i < totalFeeds; i += BATCH_SIZE) {
                     const batch = orderedUrls.slice(i, i + BATCH_SIZE);
 
@@ -408,8 +417,8 @@
                     }
                 }
 
-                // Only reload the active feed if it wasn't just loaded on startup
-                if (activeFeedUrl && activeFeedTitle && activeFeedUrl !== skipUrl) {
+                // Refresh active view only when user explicitly clicked the Refresh button
+                if (forceRefresh && activeFeedUrl && activeFeedTitle) {
                     await fetchFeed(activeFeedUrl, activeFeedTitle, activeLink);
                 }
 
@@ -426,111 +435,6 @@
                     errorContainer.style.display = 'none';
                     errorContainer.textContent = '';
                 }, 2000);
-            }
-        }
-
-        function scrollToTop() {
-            // This function directly and immediately resets the scroll position.
-            const mainContent = document.querySelector('.main-content');
-            if (mainContent) {
-                mainContent.scrollTop = 0;
-            }
-            // Also reset the main window's scroll position, as a fallback.
-            window.scrollTo(0, 0);
-        }
-
-        async function fetchFeed(url, title, activeLink) {
-            currentFetchUrl = url;
-            currentFeedTitle = title || 'Bobs Stuff';
-            exitArticleView();
-
-            const inputGroup = document.querySelector('.input-group');
-            let loadingIcon = null;
-            updateFavoriteIconsState(url);
-            const iconId = activeLink ? `loading-icon-${encodeURIComponent(url)}` : null;
-
-            // Look up per-source settings (openArticlesInNewTab & defaultReaderMode)
-            const cleanLookupUrl = (url || '').replace(/#scrape$/, '');
-            let matchedLink = null;
-            for (const section of loadedConfig) {
-                matchedLink = section.links.find(
-                    l => (l.feed || l.href || '').replace(/#scrape$/, '') === cleanLookupUrl
-                );
-                if (matchedLink) break;
-            }
-            currentOpenInNewTab = !!(matchedLink && (matchedLink.openArticlesInNewTab || matchedLink.target));
-            currentDefaultReaderMode = !!(matchedLink && matchedLink.defaultReaderMode);
-
-            errorContainer.style.display = 'none';
-            if (url && url.endsWith('.html')) {
-                feedTitle.textContent = title;
-                inputGroup.style.display = 'none';
-                renderIframe(feedContainer, url);
-                return;
-            }
-
-            inputGroup.style.display = 'flex';
-
-            if (iconId) {
-                const existingIcon = document.getElementById(iconId);
-                if (existingIcon) existingIcon.remove();
-            }
-            feedTitle.textContent = title || 'Loading...';
-            renderPlaceholders(feedContainer);
-
-            if (activeLink) {
-                loadingIcon = document.createElement('div');
-                loadingIcon.className = 'loading-icon';
-                loadingIcon.id = iconId;
-                loadingIcon.style.display = 'inline-block';
-                activeLink.parentElement.appendChild(loadingIcon);
-            }
-
-            if (!url) {
-                errorContainer.innerHTML = 'The requested feed is not available.';
-                errorContainer.style.display = 'block';
-                if (loadingIcon) loadingIcon.remove();
-                feedTitle.textContent = title || 'Bobs Stuff';
-                feedContainer.innerHTML = '';
-                return;
-            }
-
-            const cachedItems = getCache(url);
-            if (cachedItems && cachedItems.length > 0) {
-                feedTitle.textContent = title;
-                renderFeedItems(cachedItems, feedContainer, currentOpenInNewTab);
-                scrollToTop();
-                if (loadingIcon) loadingIcon.remove();
-                return;
-            }
-
-            try {
-                const items = await _fetchAndParseFeed(url);
-                setCache(url, items);
-                prefetchedFeeds.add(url);
-
-                // Race-condition guard: stop if the user clicked another feed while waiting
-                if (currentFetchUrl !== url) return;
-
-                feedTitle.textContent = title;
-                renderFeedItems(items, feedContainer, currentOpenInNewTab);
-                scrollToTop();
-                if (activeLink) activeLink.classList.remove('disabled');
-            } catch (error) {
-                if (currentFetchUrl !== url) return;
-
-                console.error(`Fetch failed for ${url}:`, error);
-                const isRssFile = /rss|feed|xml|atom|rdf|#scrape/i.test(url) || url.includes('/rss');
-                if (isRssFile) {
-                    const cleanUrl = url.replace(/#scrape$/, '');
-                    errorContainer.innerHTML = `<b>Feed Error:</b> ${error.message} <br><br><a href="${cleanUrl}" target="_blank">Open Directly</a> | <button onclick="fetchFeed('${url}', '${title}', null)">Retry</button>`;
-                    errorContainer.style.display = 'block';
-                    feedContainer.innerHTML = '';
-                } else {
-                    renderIframe(feedContainer, url);
-                }
-            } finally {
-                if (loadingIcon) loadingIcon.remove();
             }
         }
 
@@ -885,7 +789,6 @@
                 if (firstFeedLink) {
                     const feedUrl = firstFeedLink.getAttribute('data-feed');
                     const feedTitle = firstFeedLink.getAttribute('data-title');
-                    initialFeedUrl = feedUrl;
                     rssInput.value = feedUrl;
 
                     firstFeedLink.classList.add('active');
