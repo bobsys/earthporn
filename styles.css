@@ -1,5 +1,4 @@
 @import url('https://googleapis.com');
-@import url('https://googleapis.com');
 
 :root {
     --bg-body: #141518;
@@ -144,8 +143,9 @@ body {
 }
 
 .sidebar h1 {
-    font-family: 'Orbitron', sans-serif;
-    font-size: 1.45em;
+    font-family: 'Play', sans-serif;
+    font-size: 1.65em;
+    font-weight: 700;
     color: var(--brand-color);
     letter-spacing: 0.5px;
 }
