@@ -536,7 +536,25 @@
 
         //#####
 
-        async function loadReaderMode(articleUrl, fallbackTitle) {
+        function showToast(message, durationMs = 3500) {
+            const existing = document.getElementById('app-toast');
+            if (existing) existing.remove();
+
+            const toast = document.createElement('div');
+            toast.id = 'app-toast';
+            toast.className = 'toast-banner';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+
+            requestAnimationFrame(() => toast.classList.add('show'));
+
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, durationMs);
+        }
+
+        async function loadReaderMode(articleUrl, fallbackTitle, onFallback = null) {
             const readerBtn = document.getElementById('reader-view-btn');
             if (readerBtn) {
                 readerBtn.disabled = true;
@@ -575,7 +593,24 @@
                     </article>
                 `;
                 scrollToTop();
+
+                if (readerBtn) {
+                    readerBtn.disabled = false;
+                    readerBtn.textContent = '🌐 Web View';
+                }
             } catch (err) {
+                console.warn('Reader Mode unavailable, falling back to Web View:', err.message);
+                if (readerBtn) {
+                    readerBtn.disabled = false;
+                }
+
+                // Automatically switch to Web View (iframe) without showing an error
+                if (typeof onFallback === 'function') {
+                    showToast('The article could not be rendered in reader mode - switching to web mode');
+                    onFallback();
+                    return;
+                }
+
                 feedContainer.innerHTML = `
                     <div class="reader-article">
                         <h2>Reader Mode Unavailable</h2>
@@ -583,13 +618,10 @@
                         <p><a href="${articleUrl}" target="_blank" rel="noopener" style="color: var(--accent-primary);">Open Original Article in New Tab ↗</a></p>
                     </div>
                 `;
-            } finally {
-                if (readerBtn) {
-                    readerBtn.disabled = false;
-                    readerBtn.textContent = '🌐 Web View';
-                }
             }
         }
+
+        //#####
 
         function exitArticleView() {
             const articleHeader = document.getElementById('article-header-bar');
@@ -639,7 +671,7 @@
                 readerBtn.onclick = () => {
                     if (!isReaderMode) {
                         isReaderMode = true;
-                        loadReaderMode(articleUrl, articleTitle);
+                        loadReaderMode(articleUrl, articleTitle, showIframe);
                     } else {
                         showIframe();
                     }
