@@ -136,6 +136,10 @@
 
         // Tracker for active fetch request to prevent race conditions
         let currentFetchUrl = null;
+        let currentFeedItems = [];
+        let currentFeedTitle = '';
+        let currentOpenInNewTab = false;
+        let currentDefaultReaderMode = false;
 
         const MAX_RETRY_ATTEMPTS = 2;
         const INITIAL_RETRY_DELAY_MS = 1000;
@@ -518,10 +522,6 @@
         }
 
         //#####
-
-        let currentFeedItems = [];
-        let currentFeedTitle = '';
-        let currentOpenInNewTab = false;
 
         function exitArticleView() {
             const articleControls = document.getElementById('sidebar-article-controls');
