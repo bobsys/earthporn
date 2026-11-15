@@ -68,6 +68,10 @@
                 <input type="checkbox" id="scrape-page-checkbox" style="width: auto; margin-right: 8px;">
                 <label for="scrape-page-checkbox">Scrape stories from web page (non-RSS)</label>
             </div>
+            <div style="margin-bottom: 16px; display: flex; align-items: center;">
+                <input type="checkbox" id="default-reader-checkbox" style="width: auto; margin-right: 8px;">
+                <label for="default-reader-checkbox">Default articles to Reader View</label>
+            </div>
             <div class="modal-buttons">
                 <button id="modal-cancel-btn">Cancel</button>
                 <button id="modal-save-btn">Save</button>
@@ -96,6 +100,10 @@
             <div style="margin-bottom: 16px; display: flex; align-items: center;">
                 <input type="checkbox" id="scrape-page-checkbox" style="width: auto; margin-right: 8px;">
                 <label for="scrape-page-checkbox">Scrape stories from web page (non-RSS)</label>
+            </div>
+            <div style="margin-bottom: 16px; display: flex; align-items: center;">
+                <input type="checkbox" id="edit-default-reader-checkbox" style="width: auto; margin-right: 8px;">
+                <label for="edit-default-reader-checkbox">Default articles to Reader View</label>
             </div>
             <div class="modal-buttons">
                 <button id="edit-modal-cancel-btn">Cancel</button>
@@ -416,12 +424,25 @@
 
         async function fetchFeed(url, title, activeLink) {
             currentFetchUrl = url;
-            exitArticleView();
             currentFeedTitle = title || 'Bobs Stuff';
+            exitArticleView();
+
             const inputGroup = document.querySelector('.input-group');
             let loadingIcon = null;
             updateFavoriteIconsState(url);
             const iconId = activeLink ? `loading-icon-${encodeURIComponent(url)}` : null;
+
+            // Look up per-source settings (openArticlesInNewTab & defaultReaderMode)
+            const cleanLookupUrl = (url || '').replace(/#scrape$/, '');
+            let matchedLink = null;
+            for (const section of loadedConfig) {
+                matchedLink = section.links.find(
+                    l => (l.feed || l.href || '').replace(/#scrape$/, '') === cleanLookupUrl
+                );
+                if (matchedLink) break;
+            }
+            currentOpenInNewTab = !!(matchedLink && (matchedLink.openArticlesInNewTab || matchedLink.target));
+            currentDefaultReaderMode = !!(matchedLink && matchedLink.defaultReaderMode);
 
             errorContainer.style.display = 'none';
             if (url && url.endsWith('.html')) {
@@ -460,7 +481,7 @@
             const cachedItems = getCache(url);
             if (cachedItems && cachedItems.length > 0) {
                 feedTitle.textContent = title;
-                renderFeedItems(cachedItems, feedContainer);
+                renderFeedItems(cachedItems, feedContainer, currentOpenInNewTab);
                 scrollToTop();
                 if (loadingIcon) loadingIcon.remove();
                 return;
@@ -469,12 +490,13 @@
             try {
                 const items = await _fetchAndParseFeed(url);
                 setCache(url, items);
+                prefetchedFeeds.add(url);
 
-                // Race-condition guard: if the user clicked another feed while waiting, stop here
+                // Race-condition guard: stop if the user clicked another feed while waiting
                 if (currentFetchUrl !== url) return;
 
                 feedTitle.textContent = title;
-                renderFeedItems(items, feedContainer);
+                renderFeedItems(items, feedContainer, currentOpenInNewTab);
                 scrollToTop();
                 if (activeLink) activeLink.classList.remove('disabled');
             } catch (error) {
@@ -494,6 +516,8 @@
                 if (loadingIcon) loadingIcon.remove();
             }
         }
+
+        //#####
 
         let currentFeedItems = [];
         let currentFeedTitle = '';
@@ -569,8 +593,8 @@
             const readerBtn = document.getElementById('reader-view-btn');
             const originalLink = document.getElementById('open-original-link');
 
-            // 1. Default back to Web View (iframe)
-            let isReaderMode = false;
+            // Initialize based on the active source's defaultReaderMode setting
+            let isReaderMode = currentDefaultReaderMode;
 
             const showIframe = () => {
                 isReaderMode = false;
@@ -581,11 +605,11 @@
                 scrollToTop();
             };
 
-            // 2. Hide top two rows
+            // 1. Hide top two rows
             if (feedTitle) feedTitle.style.display = 'none';
             if (inputGroup) inputGroup.style.display = 'none';
 
-            // 3. Wire up sidebar buttons
+            // 2. Wire up sidebar buttons
             if (backBtn) {
                 const activeSidebarTitle = document.querySelector('.sidebar a.active')?.getAttribute('data-title');
                 const labelTitle = currentFeedTitle || activeSidebarTitle || 'Feed';
@@ -599,8 +623,7 @@
             }
 
             if (readerBtn) {
-                // Offer Reader View as an optional toggle
-                readerBtn.textContent = '📖 Reader View';
+                readerBtn.textContent = isReaderMode ? '🌐 Web View' : '📖 Reader View';
                 readerBtn.onclick = () => {
                     if (!isReaderMode) {
                         isReaderMode = true;
@@ -618,9 +641,15 @@
                 articleControls.style.display = 'flex';
             }
 
-            // 4. Load Web View (iframe) by default
-            showIframe();
+            // 3. Load the appropriate initial view for this source
+            if (isReaderMode) {
+                loadReaderMode(articleUrl, articleTitle);
+            } else {
+                showIframe();
+            }
         }
+
+        //########
 
         function renderFeedItems(items, feedContainer, openInNewTab = false) {
             currentFeedItems = items;
@@ -972,12 +1001,14 @@
             const privateOnlyCheckbox = document.getElementById('private-only-checkbox');
             const newTabCheckbox = document.getElementById('new-tab-checkbox');
             const scrapeCheckbox = document.getElementById('scrape-page-checkbox');
+            const defaultReaderCheckbox = document.getElementById('default-reader-checkbox');
             const newFeedSectionSelect = document.getElementById('new-feed-section');
 
-            // Automatically uncheck "Scrape" if "Open in new tab" is checked
+            // Uncheck incompatible options when "Open in new tab" is checked
             newTabCheckbox?.addEventListener('change', () => {
-                if (newTabCheckbox.checked && scrapeCheckbox) {
-                    scrapeCheckbox.checked = false;
+                if (newTabCheckbox.checked) {
+                    if (scrapeCheckbox) scrapeCheckbox.checked = false;
+                    if (defaultReaderCheckbox) defaultReaderCheckbox.checked = false;
                 }
             });
 
@@ -992,9 +1023,11 @@
                     newFeedSectionSelect.appendChild(option);
                 });
 
-                // Pre-check the scrape box if the user already typed #scrape in the URL input
                 if (scrapeCheckbox) {
                     scrapeCheckbox.checked = rssInput.value.trim().endsWith('#scrape');
+                }
+                if (defaultReaderCheckbox) {
+                    defaultReaderCheckbox.checked = false;
                 }
 
                 modal.style.display = 'flex';
@@ -1006,11 +1039,14 @@
                 newFeedTitleInput.value = '';
                 newTabCheckbox.checked = false;
                 if (scrapeCheckbox) scrapeCheckbox.checked = false;
+                if (defaultReaderCheckbox) defaultReaderCheckbox.checked = false;
             });
 
             modalSave.addEventListener('click', async () => {
                 const newTitle = newFeedTitleInput.value.trim();
                 const selectedSectionTitle = newFeedSectionSelect.value;
+                const openArticlesInNewTab = newTabCheckbox.checked;
+                const defaultReaderMode = !!(defaultReaderCheckbox && defaultReaderCheckbox.checked && !openArticlesInNewTab);
                 let newUrl = rssInput.value.trim().replace(/#scrape$/, '');
 
                 if (!newTitle || !newUrl || !selectedSectionTitle) {
@@ -1018,13 +1054,14 @@
                     return;
                 }
 
-                if (scrapeCheckbox && scrapeCheckbox.checked && !newTabCheckbox.checked) {
+                if (scrapeCheckbox && scrapeCheckbox.checked && !openArticlesInNewTab) {
                     newUrl += '#scrape';
                 }
 
-                const newLinkObject = newTabCheckbox.checked
-                    ? { href: newUrl, title: newTitle, target: '_blank' }
-                    : { feed: newUrl, title: newTitle };
+                const isLocalPage = newUrl.endsWith('.html');
+                const newLinkObject = isLocalPage
+                    ? { href: newUrl, title: newTitle, ...(openArticlesInNewTab ? { target: '_blank' } : {}) }
+                    : { feed: newUrl, title: newTitle, openArticlesInNewTab, defaultReaderMode };
 
                 const targetSection = loadedConfig.find(s => s.title === selectedSectionTitle);
                 if (targetSection) {
@@ -1034,10 +1071,8 @@
                     return;
                 }
 
-                // Always save to the private config
                 downloadJson(loadedConfig, 'private-links.json');
 
-                // If "Private Only" is unchecked, also save to the public config
                 if (!privateOnlyCheckbox.checked) {
                     try {
                         const publicConfigResponse = await fetch('public-links.json');
@@ -1061,12 +1096,15 @@
                 newFeedTitleInput.value = '';
                 newTabCheckbox.checked = false;
                 if (scrapeCheckbox) scrapeCheckbox.checked = false;
+                if (defaultReaderCheckbox) defaultReaderCheckbox.checked = false;
 
                 rssInput.value = newUrl;
                 buildSidebar(loadedConfig, newUrl);
                 updateFavoriteIconsState(newUrl);
             });
         }
+
+        //###
 
         function initEditFavoriteModal() {
             const editButton = document.getElementById('edit-from-favorites');
@@ -1079,8 +1117,15 @@
             const editPrivateOnlyCheckbox = document.getElementById('edit-private-only-checkbox');
             const editNewTabCheckbox = document.getElementById('edit-new-tab-checkbox');
             const editScrapeCheckbox = document.getElementById('edit-scrape-page-checkbox');
+            const editDefaultReaderCheckbox = document.getElementById('edit-default-reader-checkbox');
 
             let originalUrlToEdit = null;
+
+            editNewTabCheckbox?.addEventListener('change', () => {
+                if (editNewTabCheckbox.checked) {
+                    if (editDefaultReaderCheckbox) editDefaultReaderCheckbox.checked = false;
+                }
+            });
 
             editButton.addEventListener('click', async () => {
                 if (editButton.disabled) return;
@@ -1091,7 +1136,6 @@
                 let linkToEdit = null;
                 let sectionOfLink = null;
 
-                // Match against loadedConfig regardless of whether #scrape is present
                 for (const section of loadedConfig) {
                     const foundLink = section.links.find(link => {
                         const saved = (link.feed || link.href || '').replace(/#scrape$/, '');
@@ -1113,15 +1157,16 @@
                 const rawSavedUrl = linkToEdit.feed || linkToEdit.href || '';
                 const hasScrapeFlag = rawSavedUrl.includes('#scrape');
 
-                // Pre-populate the edit modal inputs and checkboxes
                 editFeedTitleInput.value = linkToEdit.title;
                 editFeedUrlInput.value = rawSavedUrl.replace(/#scrape$/, '');
                 editNewTabCheckbox.checked = !!(linkToEdit.openArticlesInNewTab || linkToEdit.target);
                 if (editScrapeCheckbox) {
                     editScrapeCheckbox.checked = hasScrapeFlag;
                 }
+                if (editDefaultReaderCheckbox) {
+                    editDefaultReaderCheckbox.checked = !!linkToEdit.defaultReaderMode;
+                }
 
-                // Populate and select the section dropdown
                 editFeedSectionSelect.innerHTML = '';
                 loadedConfig.forEach(section => {
                     const option = document.createElement('option');
@@ -1131,7 +1176,6 @@
                 });
                 editFeedSectionSelect.value = sectionOfLink.title;
 
-                // Pre-populate the "Private Only" checkbox
                 try {
                     const publicConfigResponse = await fetch('public-links.json');
                     const publicConfig = await publicConfigResponse.json();
@@ -1161,6 +1205,7 @@
                 const newTitle = editFeedTitleInput.value.trim();
                 const newSectionTitle = editFeedSectionSelect.value;
                 const openArticlesInNewTab = editNewTabCheckbox.checked;
+                const defaultReaderMode = !!(editDefaultReaderCheckbox && editDefaultReaderCheckbox.checked && !openArticlesInNewTab);
                 let newUrl = editFeedUrlInput.value.trim().replace(/#scrape$/, '');
 
                 if (!newTitle || !newUrl || !newSectionTitle) {
@@ -1172,7 +1217,6 @@
                     newUrl += '#scrape';
                 }
 
-                // 1. Remove the old link object
                 const cleanOriginal = originalUrlToEdit.replace(/#scrape$/, '');
                 loadedConfig.forEach(section => {
                     section.links = section.links.filter(link => {
@@ -1181,13 +1225,11 @@
                     });
                 });
 
-                // 2. Keep standalone .html pages as href; save all feeds with openArticlesInNewTab flag
                 const isLocalPage = newUrl.endsWith('.html');
                 const newLinkObject = isLocalPage
                     ? { href: newUrl, title: newTitle, ...(openArticlesInNewTab ? { target: '_blank' } : {}) }
-                    : { feed: newUrl, title: newTitle, openArticlesInNewTab };
+                    : { feed: newUrl, title: newTitle, openArticlesInNewTab, defaultReaderMode };
 
-                // 3. Add the updated link object to the selected section
                 const newSection = loadedConfig.find(s => s.title === newSectionTitle);
                 if (newSection) {
                     newSection.links.push(newLinkObject);
@@ -1195,7 +1237,6 @@
 
                 downloadJson(loadedConfig, 'private-links.json');
 
-                // 4. Update public-links.json if applicable
                 try {
                     const publicConfigResponse = await fetch('public-links.json');
                     let publicConfig = await publicConfigResponse.json();
@@ -1217,6 +1258,10 @@
                     console.error('Could not update public-links.json:', error);
                     alert('Could not update public-links.json. Please check the console.');
                 }
+
+                // Update active feed flags immediately if editing the currently loaded feed
+                currentOpenInNewTab = openArticlesInNewTab;
+                currentDefaultReaderMode = defaultReaderMode;
 
                 editModal.style.display = 'none';
                 originalUrlToEdit = null;

@@ -3,46 +3,57 @@
     "title": "News Feeds",
     "links": [
       {
+        "defaultReaderMode": "false",
         "feed": "https://www.engadget.com/rss.xml",
         "title": "Tech"
       },
       {
+        "defaultReaderMode": "false",
         "feed": "https://www.zmescience.com/feed/",
         "title": "Science"
       },
       {
+        "defaultReaderMode": "false",
         "feed": "https://bg.raindrop.io/rss/public/46406138",
         "title": "Boblog"
       },
       {
+        "defaultReaderMode": "false",
         "feed": "https://feeds.npr.org/1014/rss.xml",
         "title": "NPR Politics"
       },
       {
+        "defaultReaderMode": "false",
         "feed": "https://feeds.a.dj.com/rss/RSSWorldNews.xml",
         "title": "Wall St. Journal"
       },
       {
+        "defaultReaderMode": "false",
         "feed": "https://www.allsides.com/news/rss",
         "title": "All Sides"
       },
       {
+        "defaultReaderMode": "false",
         "feed": "http://feeds.bbci.co.uk/news/rss.xml",
         "title": "BBC News"
       },
       {
+        "defaultReaderMode": "false",
         "feed": "http://feeds.foxnews.com/foxnews/latest",
         "title": "Fox News"
       },
       {
+        "defaultReaderMode": "false",
         "feed": "https://www.realclearpolitics.com/index.xml",
         "title": "Real Clear"
       },
       {
+        "defaultReaderMode": "false",
         "feed": "https://trumpstruth.org/feed",
         "title": "trump Posts"
       },
       {
+        "defaultReaderMode": "false",
         "feed": "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en",
         "title": "Google News"
       }
@@ -52,30 +63,37 @@
     "title": "Sports Feeds",
     "links": [
       {
+        "defaultReaderMode": "false",
         "feed": "https://www.sportingnews.com/us/rss",
         "title": "Sporting News"
       },
       {
+        "defaultReaderMode": "false",
         "feed": "https://sports.yahoo.com/rss/",
         "title": "Yahoo"
       },
       {
+        "defaultReaderMode": "false",
         "feed": "https://nypost.com/new-york-rangers/#scrape",
         "title": "Rangers"
       },
       {
+        "defaultReaderMode": "false",
         "feed": "https://nypost.com/new-york-knicks/#scrape",
         "title": "Knicks"
       },
       {
+        "defaultReaderMode": "false",
         "feed": "https://nypost.com/new-york-giants/#scrape",
         "title": "Giants"
       },
       {
+        "defaultReaderMode": "false",
         "feed": "https://nypost.com/new-york-jets/#scrape",
         "title": "Jets"
       },
       {
+        "defaultReaderMode": "false",
         "feed": "https://nypost.com/new-york-yankees/#scrape",
         "title": "Yankees"
       }
