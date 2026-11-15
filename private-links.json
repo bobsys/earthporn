@@ -3,14 +3,39 @@
     "title": "News Feeds",
     "links": [
       {
-        "defaultReaderMode": "false",
-        "feed": "https://www.engadget.com/rss.xml",
-        "title": "Tech"
+        "defaultReaderMode": "true",
+        "feed": "https://www.nbcnews.com/",
+        "title": "NBC News"
       },
       {
-        "defaultReaderMode": "false",
-        "feed": "https://www.zmescience.com/feed/",
-        "title": "Science"
+        "defaultReaderMode": "true",
+        "feed": "https://news.yahoo.com",
+        "title": "Yahoo News"
+      },
+      {
+        "defaultReaderMode": "true",
+        "feed": "https://www.cbsnews.com/",
+        "title": "CBS News"
+      },
+      {
+        "defaultReaderMode": "true",
+        "feed": "https://abcnews.com/",
+        "title": "ABC News"
+      },
+      {
+        "defaultReaderMode": "true",
+        "feed": "https://www.bbc.com/",
+        "title": "BBC"
+      },
+      {
+        "defaultReaderMode": "true",
+        "feed": "https://www.cnbc.com/",
+        "title": "CNBC"
+      },
+      {
+        "defaultReaderMode": "true",
+        "feed": "https://mashable.com/",
+        "title": "Mashable"
       },
       {
         "defaultReaderMode": "false",
@@ -24,16 +49,6 @@
       },
       {
         "defaultReaderMode": "false",
-        "feed": "https://feeds.a.dj.com/rss/RSSWorldNews.xml",
-        "title": "Wall St. Journal"
-      },
-      {
-        "defaultReaderMode": "false",
-        "feed": "https://www.allsides.com/news/rss",
-        "title": "All Sides"
-      },
-      {
-        "defaultReaderMode": "false",
         "feed": "http://feeds.bbci.co.uk/news/rss.xml",
         "title": "BBC News"
       },
@@ -43,19 +58,28 @@
         "title": "Fox News"
       },
       {
-        "defaultReaderMode": "false",
-        "feed": "https://www.realclearpolitics.com/index.xml",
-        "title": "Real Clear"
-      },
-      {
-        "defaultReaderMode": "false",
         "feed": "https://trumpstruth.org/feed",
-        "title": "trump Posts"
+        "title": "trump Posts",
+        "openArticlesInNewTab": false,
+        "defaultReaderMode": false
       },
       {
-        "defaultReaderMode": "false",
+        "feed": "https://www.allsides.com/news/rss",
+        "title": "All Sides",
+        "openArticlesInNewTab": false,
+        "defaultReaderMode": false
+      },
+      {
         "feed": "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en",
-        "title": "Google News"
+        "title": "Google News",
+        "openArticlesInNewTab": false,
+        "defaultReaderMode": false
+      },
+      {
+        "feed": "https://www.zmescience.com/feed/",
+        "title": "Science",
+        "openArticlesInNewTab": false,
+        "defaultReaderMode": false
       }
     ]
   },
@@ -63,14 +87,14 @@
     "title": "Sports Feeds",
     "links": [
       {
-        "defaultReaderMode": "false",
-        "feed": "https://www.sportingnews.com/us/rss",
-        "title": "Sporting News"
+        "defaultReaderMode": "true",
+        "feed": "https://heavy.com",
+        "title": "Heavy"
       },
       {
         "defaultReaderMode": "false",
-        "feed": "https://sports.yahoo.com/rss/",
-        "title": "Yahoo"
+        "feed": "https://www.sportingnews.com/us/rss",
+        "title": "Sporting News"
       },
       {
         "defaultReaderMode": "false",
@@ -96,6 +120,12 @@
         "defaultReaderMode": "false",
         "feed": "https://nypost.com/new-york-yankees/#scrape",
         "title": "Yankees"
+      },
+      {
+        "feed": "https://sports.yahoo.com/rss/",
+        "title": "Yahoo",
+        "openArticlesInNewTab": false,
+        "defaultReaderMode": false
       }
     ]
   },

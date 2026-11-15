@@ -57,7 +57,9 @@
       },
       {
         "feed": "https://sports.yahoo.com/rss/",
-        "title": "Yahoo"
+        "title": "Yahoo",
+        "openArticlesInNewTab": false,
+        "defaultReaderMode": false
       }
     ]
   },
