@@ -228,36 +228,49 @@ body {
     cursor: not-allowed;
 }
 
-/* --- SIDEBAR ARTICLE READING CONTROLS --- */
-#sidebar-article-controls {
+/* --- STICKY RIGHT-PANEL ARTICLE HEADER --- */
+#article-header-bar {
+    position: sticky;
+    top: 0;
+    z-index: 20;
     display: flex;
-    flex-direction: column;
-    gap: 8px;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+    padding: 10px 14px;
     margin-bottom: 14px;
-    padding: 12px;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
+    border-radius: 10px;
+    box-shadow: var(--shadow-sm);
+}
+
+.article-header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+#article-header-bar button {
+    padding: 8px 14px;
+    font-size: 0.9em;
+}
+
+#article-header-bar a {
+    display: inline-block;
+    padding: 8px 14px;
     border-radius: 8px;
-}
-
-#sidebar-article-controls button {
-    width: 100%;
-    text-align: center;
-}
-
-#sidebar-article-controls a {
-    display: block;
-    text-align: center;
-    padding: 8px 10px;
-    border-radius: 6px;
     border: 1px solid var(--border-color);
     background: var(--bg-input);
     color: var(--accent-primary);
+    text-decoration: none;
     font-size: 0.9em;
-    font-weight: 500;
+    font-weight: 600;
+    transition: background-color 0.2s, color 0.2s;
 }
 
-#sidebar-article-controls a:hover {
+#article-header-bar a:hover {
     background: var(--bg-header-pill);
     color: var(--text-primary);
 }

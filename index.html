@@ -32,6 +32,13 @@
             <div id="sidebar-content"></div>
         </div>
         <div class="main-content">
+            <div id="article-header-bar" style="display: none;">
+                <button id="back-to-feed-btn" type="button">← Back to Feed</button>
+                <div class="article-header-actions">
+                    <button id="reader-view-btn" type="button">📖 Reader View</button>
+                    <a id="open-original-link" href="#" target="_blank" rel="noopener">Open Original Page ↗</a>
+                </div>
+            </div>
             <div class="header-controls">
                 <!-- Toggle buttons will be appended here dynamically if needed -->
             </div>
@@ -143,6 +150,18 @@
 
         const MAX_RETRY_ATTEMPTS = 2;
         const INITIAL_RETRY_DELAY_MS = 1000;
+
+        function normalizeUrl(rawUrl) {
+            const trimmed = (rawUrl || '').trim();
+            if (!trimmed) return '';
+            // Leave relative local HTML files (e.g., "earth.html") untouched
+            if (trimmed.endsWith('.html') && !trimmed.includes('/')) return trimmed;
+            // Prepend https:// if no protocol (http:// or https://) is present
+            if (!/^https?:\/\//i.test(trimmed)) {
+                return `https://${trimmed}`;
+            }
+            return trimmed;
+        }
 
         function formatHumanDate(rawDate) {
             if (!rawDate || rawDate === 'No date') return 'Date unavailable';
@@ -523,14 +542,6 @@
 
         //#####
 
-        function exitArticleView() {
-            const articleControls = document.getElementById('sidebar-article-controls');
-            const inputGroup = document.querySelector('.input-group');
-            if (articleControls) articleControls.style.display = 'none';
-            if (feedTitle) feedTitle.style.display = 'block';
-            if (inputGroup) inputGroup.style.display = 'flex';
-        }
-
         async function loadReaderMode(articleUrl, fallbackTitle) {
             const readerBtn = document.getElementById('reader-view-btn');
             if (readerBtn) {
@@ -586,30 +597,37 @@
             }
         }
 
+        function exitArticleView() {
+            const articleHeader = document.getElementById('article-header-bar');
+            const inputGroup = document.querySelector('.input-group');
+            if (articleHeader) articleHeader.style.display = 'none';
+            if (feedTitle) feedTitle.style.display = 'block';
+            if (inputGroup) inputGroup.style.display = 'flex';
+        }
+
         function openArticleInRightPanel(articleUrl, articleTitle) {
-            const articleControls = document.getElementById('sidebar-article-controls');
+            const articleHeader = document.getElementById('article-header-bar');
             const inputGroup = document.querySelector('.input-group');
             const backBtn = document.getElementById('back-to-feed-btn');
             const readerBtn = document.getElementById('reader-view-btn');
             const originalLink = document.getElementById('open-original-link');
 
-            // Initialize based on the active source's defaultReaderMode setting
             let isReaderMode = currentDefaultReaderMode;
 
             const showIframe = () => {
                 isReaderMode = false;
                 if (readerBtn) readerBtn.textContent = '📖 Reader View';
                 feedContainer.innerHTML = `
-                    <iframe src="${articleUrl}" style="width: 100%; height: calc(100vh - 95px); border: none; border-radius: 8px; background: #fff;"></iframe>
+                    <iframe src="${articleUrl}" style="width: 100%; height: calc(100vh - 135px); border: none; border-radius: 8px; background: #fff;"></iframe>
                 `;
                 scrollToTop();
             };
 
-            // 1. Hide top two rows
+            // 1. Hide top two rows (title pill & URL input bar)
             if (feedTitle) feedTitle.style.display = 'none';
             if (inputGroup) inputGroup.style.display = 'none';
 
-            // 2. Wire up sidebar buttons
+            // 2. Wire up sticky right-panel header buttons
             if (backBtn) {
                 const activeSidebarTitle = document.querySelector('.sidebar a.active')?.getAttribute('data-title');
                 const labelTitle = currentFeedTitle || activeSidebarTitle || 'Feed';
@@ -637,11 +655,11 @@
             if (originalLink) {
                 originalLink.href = articleUrl;
             }
-            if (articleControls) {
-                articleControls.style.display = 'flex';
+            if (articleHeader) {
+                articleHeader.style.display = 'flex';
             }
 
-            // 3. Load the appropriate initial view for this source
+            // 3. Load initial view for this source
             if (isReaderMode) {
                 loadReaderMode(articleUrl, articleTitle);
             } else {
@@ -767,7 +785,7 @@
         sidebarOverlay.addEventListener('touchstart', handleInteraction, { passive: false });
 
         function triggerCustomFeedLoad() {
-            const url = rssInput.value.trim();
+            const url = normalizeUrl(rssInput.value.trim());
             if (url) {
                 fetchFeed(url, 'Custom Feed', null);
             }
@@ -1047,7 +1065,7 @@
                 const selectedSectionTitle = newFeedSectionSelect.value;
                 const openArticlesInNewTab = newTabCheckbox.checked;
                 const defaultReaderMode = !!(defaultReaderCheckbox && defaultReaderCheckbox.checked && !openArticlesInNewTab);
-                let newUrl = rssInput.value.trim().replace(/#scrape$/, '');
+                let newUrl = normalizeUrl(rssInput.value.trim().replace(/#scrape$/, ''));
 
                 if (!newTitle || !newUrl || !selectedSectionTitle) {
                     alert('Please provide a title and select a section.');
@@ -1206,7 +1224,7 @@
                 const newSectionTitle = editFeedSectionSelect.value;
                 const openArticlesInNewTab = editNewTabCheckbox.checked;
                 const defaultReaderMode = !!(editDefaultReaderCheckbox && editDefaultReaderCheckbox.checked && !openArticlesInNewTab);
-                let newUrl = editFeedUrlInput.value.trim().replace(/#scrape$/, '');
+                let newUrl = normalizeUrl(editFeedUrlInput.value.trim().replace(/#scrape$/, ''));
 
                 if (!newTitle || !newUrl || !newSectionTitle) {
                     alert('Please provide a title, URL, and section.');
