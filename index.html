@@ -66,8 +66,8 @@
                 <label for="new-tab-checkbox">Open in new tab</label>
             </div>
             <div style="margin-bottom: 16px; display: flex; align-items: center;">
-                <input type="checkbox" id="scrape-page-checkbox" style="width: auto; margin-right: 8px;">
-                <label for="scrape-page-checkbox">Scrape stories from web page (non-RSS)</label>
+                <input type="checkbox" id="edit-scrape-page-checkbox" style="width: auto; margin-right: 8px;">
+                <label for="edit-scrape-page-checkbox">Scrape stories from web page (non-RSS)</label>
             </div>
             <div style="margin-bottom: 16px; display: flex; align-items: center;">
                 <input type="checkbox" id="default-reader-checkbox" style="width: auto; margin-right: 8px;">
@@ -440,6 +440,109 @@
 
         //#####
 
+        function scrollToTop() {
+            const mainContent = document.querySelector('.main-content');
+            if (mainContent) {
+                mainContent.scrollTop = 0;
+            }
+            window.scrollTo(0, 0);
+        }
+
+        async function fetchFeed(url, title, activeLink) {
+            currentFetchUrl = url;
+            currentFeedTitle = title || 'Bobs Stuff';
+            exitArticleView();
+
+            const inputGroup = document.querySelector('.input-group');
+            let loadingIcon = null;
+            updateFavoriteIconsState(url);
+            const iconId = activeLink ? `loading-icon-${encodeURIComponent(url)}` : null;
+
+            // Look up per-source settings (openArticlesInNewTab & defaultReaderMode)
+            const cleanLookupUrl = (url || '').replace(/#scrape$/, '');
+            let matchedLink = null;
+            for (const section of loadedConfig) {
+                matchedLink = section.links.find(
+                    l => (l.feed || l.href || '').replace(/#scrape$/, '') === cleanLookupUrl
+                );
+                if (matchedLink) break;
+            }
+            currentOpenInNewTab = !!(matchedLink && (matchedLink.openArticlesInNewTab || matchedLink.target));
+            currentDefaultReaderMode = !!(matchedLink && matchedLink.defaultReaderMode);
+
+            errorContainer.style.display = 'none';
+            if (url && url.endsWith('.html')) {
+                feedTitle.textContent = title;
+                inputGroup.style.display = 'none';
+                renderIframe(feedContainer, url);
+                return;
+            }
+
+            inputGroup.style.display = 'flex';
+
+            if (iconId) {
+                const existingIcon = document.getElementById(iconId);
+                if (existingIcon) existingIcon.remove();
+            }
+            feedTitle.textContent = title || 'Loading...';
+            renderPlaceholders(feedContainer);
+
+            if (activeLink) {
+                loadingIcon = document.createElement('div');
+                loadingIcon.className = 'loading-icon';
+                loadingIcon.id = iconId;
+                loadingIcon.style.display = 'inline-block';
+                activeLink.parentElement.appendChild(loadingIcon);
+            }
+
+            if (!url) {
+                errorContainer.innerHTML = 'The requested feed is not available.';
+                errorContainer.style.display = 'block';
+                if (loadingIcon) loadingIcon.remove();
+                feedTitle.textContent = title || 'Bobs Stuff';
+                feedContainer.innerHTML = '';
+                return;
+            }
+
+            const cachedItems = getCache(url);
+            if (cachedItems && cachedItems.length > 0) {
+                feedTitle.textContent = title;
+                renderFeedItems(cachedItems, feedContainer, currentOpenInNewTab);
+                scrollToTop();
+                if (loadingIcon) loadingIcon.remove();
+                return;
+            }
+
+            try {
+                const items = await _fetchAndParseFeed(url);
+                setCache(url, items);
+                prefetchedFeeds.add(url);
+
+                // Race-condition guard: stop if the user clicked another feed while waiting
+                if (currentFetchUrl !== url) return;
+
+                feedTitle.textContent = title;
+                renderFeedItems(items, feedContainer, currentOpenInNewTab);
+                scrollToTop();
+                if (activeLink) activeLink.classList.remove('disabled');
+            } catch (error) {
+                if (currentFetchUrl !== url) return;
+
+                console.error(`Fetch failed for ${url}:`, error);
+                const isRssFile = /rss|feed|xml|atom|rdf|#scrape/i.test(url) || url.includes('/rss');
+                if (isRssFile) {
+                    const cleanUrl = url.replace(/#scrape$/, '');
+                    errorContainer.innerHTML = `<b>Feed Error:</b> ${error.message} <br><br><a href="${cleanUrl}" target="_blank">Open Directly</a> | <button onclick="fetchFeed('${url}', '${title}', null)">Retry</button>`;
+                    errorContainer.style.display = 'block';
+                    feedContainer.innerHTML = '';
+                } else {
+                    renderIframe(feedContainer, url);
+                }
+            } finally {
+                if (loadingIcon) loadingIcon.remove();
+            }
+        }
+
         function showToast(message, durationMs = 3500) {
             const existing = document.getElementById('app-toast');
             if (existing) existing.remove();
@@ -796,8 +899,7 @@
                 }
 
                 // Start pre-fetching all OTHER feeds after sidebar is built
-                prefetchAllFeeds(initialFeedUrl);
-                // ---> UPDATED BLOCK ENDS HERE <---
+                prefetchAllFeeds(false);
 
                 // If in private view, show the favorite management icons
                 if (view === 'priv') {
