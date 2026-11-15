@@ -1272,6 +1272,40 @@
             });
         }
 
+        function initDeleteFavorite() {
+            const deleteButton = document.getElementById('delete-from-favorites');
+            deleteButton.addEventListener('click', () => {
+                if (deleteButton.disabled) return;
+
+                const urlToDelete = rssInput.value.trim();
+                if (!urlToDelete) return;
+
+                if (window.confirm('Are you sure you want to remove this feed from your favorites?')) {
+                    let linkRemoved = false;
+                    const cleanTarget = urlToDelete.replace(/#scrape$/, '');
+
+                    loadedConfig.forEach(section => {
+                        const initialLinkCount = section.links.length;
+                        section.links = section.links.filter(link => {
+                            const saved = (link.feed || link.href || '').replace(/#scrape$/, '');
+                            return saved !== cleanTarget;
+                        });
+                        if (section.links.length < initialLinkCount) {
+                            linkRemoved = true;
+                        }
+                    });
+
+                    if (linkRemoved) {
+                        downloadJson(loadedConfig, 'private-links.json');
+                        buildSidebar(loadedConfig);
+                        updateFavoriteIconsState(urlToDelete);
+                        alert('Feed removed. The updated private-links.json has been downloaded.');
+                    }
+                }
+            });
+        }
+
+
         //##############################################################################
 
         // Set dynamic version date in footer
