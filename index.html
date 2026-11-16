@@ -43,6 +43,8 @@
                 <button id="add-to-favorites" title="Add to Favorites" disabled>❤️</button>
                 <button id="edit-from-favorites" title="Edit Favorite" disabled>✏️</button>
                 <button id="delete-from-favorites" title="Delete from Favorites" disabled>🗑️</button>
+                <button id="export-favorites-btn" title="Export JSON for Git Backup" style="display: none;">💾</button>
+                <button id="sync-server-btn" title="Reset Local Changes & Reload from Server" style="display: none;">🔄</button>
             </div>
             <div id="error"></div>
             <div id="feed"></div>
@@ -876,6 +878,28 @@
             }
         };
 
+        function getConfigStorageKey(isPrivate) {
+            return isPrivate ? 'bobs_stuff_private_links' : 'bobs_stuff_public_links';
+        }
+
+        function savePrivateConfigLocal(config) {
+            localStorage.setItem(getConfigStorageKey(true), JSON.stringify(config));
+        }
+
+        function savePublicConfigLocal(config) {
+            localStorage.setItem(getConfigStorageKey(false), JSON.stringify(config));
+        }
+
+        async function getPublicConfig() {
+            const localPublic = localStorage.getItem(getConfigStorageKey(false));
+            if (localPublic) {
+                return JSON.parse(localPublic);
+            }
+            const res = await fetch('public-links.json');
+            if (!res.ok) throw new Error('Failed to load public-links.json');
+            return await res.json();
+        }
+
         // --- DYNAMIC CONTENT LOADING ---
 
         async function initializePage() {
@@ -911,7 +935,6 @@
 
                 // ---> UPDATED BLOCK STARTS HERE <---
                 // Initialize with the first available feed
-                let initialFeedUrl = null;
                 const firstFeedLink = document.querySelector('.sidebar a[data-feed]');
                 if (firstFeedLink) {
                     const feedUrl = firstFeedLink.getAttribute('data-feed');
@@ -930,6 +953,8 @@
                     document.getElementById('add-to-favorites').style.display = 'block';
                     document.getElementById('edit-from-favorites').style.display = 'block';
                     document.getElementById('delete-from-favorites').style.display = 'block';
+                    document.getElementById('export-favorites-btn').style.display = 'block';
+                    document.getElementById('sync-server-btn').style.display = 'block';
                     setupFavoritesHandler();
                 }
                 inputGroup.style.display = 'flex';
@@ -1063,6 +1088,29 @@
             initAddFavoriteModal();
             initEditFavoriteModal();
             initDeleteFavorite();
+            initExportAndSyncButtons();
+        }
+
+        function initExportAndSyncButtons() {
+            const exportBtn = document.getElementById('export-favorites-btn');
+            const syncBtn = document.getElementById('sync-server-btn');
+
+            exportBtn?.addEventListener('click', () => {
+                downloadJson(loadedConfig, 'private-links.json');
+                const savedPublic = localStorage.getItem(getConfigStorageKey(false));
+                if (savedPublic) {
+                    downloadJson(JSON.parse(savedPublic), 'public-links.json');
+                }
+                showToast('Exported JSON file(s) to your Downloads folder.');
+            });
+
+            syncBtn?.addEventListener('click', () => {
+                if (window.confirm('Discard local browser changes and reload the latest links from the server?')) {
+                    localStorage.removeItem(getConfigStorageKey(true));
+                    localStorage.removeItem(getConfigStorageKey(false));
+                    location.reload();
+                }
+            });
         }
 
         function initAddFavoriteModal() {
@@ -1077,7 +1125,6 @@
             const defaultReaderCheckbox = document.getElementById('default-reader-checkbox');
             const newFeedSectionSelect = document.getElementById('new-feed-section');
 
-            // Uncheck incompatible options when "Open in new tab" is checked
             newTabCheckbox?.addEventListener('change', () => {
                 if (newTabCheckbox.checked) {
                     if (scrapeCheckbox) scrapeCheckbox.checked = false;
@@ -1144,24 +1191,19 @@
                     return;
                 }
 
-                downloadJson(loadedConfig, 'private-links.json');
+                // Save immediately to browser localStorage (no automatic file download)
+                savePrivateConfigLocal(loadedConfig);
 
                 if (!privateOnlyCheckbox.checked) {
                     try {
-                        const publicConfigResponse = await fetch('public-links.json');
-                        if (!publicConfigResponse.ok) throw new Error('Failed to load public config');
-                        const publicConfig = await publicConfigResponse.json();
-
+                        const publicConfig = await getPublicConfig();
                         const publicTargetSection = publicConfig.find(s => s.title === selectedSectionTitle);
                         if (publicTargetSection) {
                             publicTargetSection.links.push(newLinkObject);
-                            downloadJson(publicConfig, 'public-links.json');
-                        } else {
-                            alert(`Section "${selectedSectionTitle}" not found in public-links.json. The public file was not updated.`);
+                            savePublicConfigLocal(publicConfig);
                         }
                     } catch (error) {
-                        console.error("Could not update public config:", error);
-                        alert("Failed to load and update public-links.json. Please check the console for errors.");
+                        console.error('Could not update local public config:', error);
                     }
                 }
 
@@ -1174,6 +1216,7 @@
                 rssInput.value = newUrl;
                 buildSidebar(loadedConfig, newUrl);
                 updateFavoriteIconsState(newUrl);
+                showToast(`Added "${newTitle}" to Favorites.`);
             });
         }
 
@@ -1250,8 +1293,7 @@
                 editFeedSectionSelect.value = sectionOfLink.title;
 
                 try {
-                    const publicConfigResponse = await fetch('public-links.json');
-                    const publicConfig = await publicConfigResponse.json();
+                    const publicConfig = await getPublicConfig();
                     const isInPublic = publicConfig.some(section =>
                         section.links.some(link => {
                             const savedPublic = (link.feed || link.href || '').replace(/#scrape$/, '');
@@ -1260,7 +1302,6 @@
                     );
                     editPrivateOnlyCheckbox.checked = !isInPublic;
                 } catch (error) {
-                    console.error("Could not check public config, defaulting 'Private Only' to true.", error);
                     editPrivateOnlyCheckbox.checked = true;
                 }
 
@@ -1308,12 +1349,10 @@
                     newSection.links.push(newLinkObject);
                 }
 
-                downloadJson(loadedConfig, 'private-links.json');
+                savePrivateConfigLocal(loadedConfig);
 
                 try {
-                    const publicConfigResponse = await fetch('public-links.json');
-                    let publicConfig = await publicConfigResponse.json();
-
+                    const publicConfig = await getPublicConfig();
                     publicConfig.forEach(section => {
                         section.links = section.links.filter(link => {
                             const saved = (link.feed || link.href || '').replace(/#scrape$/, '');
@@ -1326,13 +1365,11 @@
                         if (publicTargetSection) publicTargetSection.links.push(newLinkObject);
                     }
 
-                    downloadJson(publicConfig, 'public-links.json');
+                    savePublicConfigLocal(publicConfig);
                 } catch (error) {
-                    console.error('Could not update public-links.json:', error);
-                    alert('Could not update public-links.json. Please check the console.');
+                    console.error('Could not update local public config:', error);
                 }
 
-                // Update active feed flags immediately if editing the currently loaded feed
                 currentOpenInNewTab = openArticlesInNewTab;
                 currentDefaultReaderMode = defaultReaderMode;
 
@@ -1341,13 +1378,15 @@
                 buildSidebar(loadedConfig, newUrl);
                 rssInput.value = newUrl;
                 updateFavoriteIconsState(newUrl);
-                alert('Favorite updated. The updated JSON file(s) have been downloaded.');
+                showToast(`Updated "${newTitle}".`);
             });
         }
 
+        //######
+
         function initDeleteFavorite() {
             const deleteButton = document.getElementById('delete-from-favorites');
-            deleteButton.addEventListener('click', () => {
+            deleteButton.addEventListener('click', async () => {
                 if (deleteButton.disabled) return;
 
                 const urlToDelete = rssInput.value.trim();
@@ -1369,10 +1408,21 @@
                     });
 
                     if (linkRemoved) {
-                        downloadJson(loadedConfig, 'private-links.json');
+                        savePrivateConfigLocal(loadedConfig);
+                        try {
+                            const publicConfig = await getPublicConfig();
+                            publicConfig.forEach(section => {
+                                section.links = section.links.filter(link => {
+                                    const saved = (link.feed || link.href || '').replace(/#scrape$/, '');
+                                    return saved !== cleanTarget;
+                                });
+                            });
+                            savePublicConfigLocal(publicConfig);
+                        } catch (e) {}
+
                         buildSidebar(loadedConfig);
                         updateFavoriteIconsState(urlToDelete);
-                        alert('Feed removed. The updated private-links.json has been downloaded.');
+                        showToast('Favorite removed.');
                     }
                 }
             });
