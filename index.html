@@ -442,6 +442,123 @@
 
         //#####
 
+        async function renderSportsScoreboard(container) {
+            const leagues = [
+                { name: 'NFL', url: 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard' },
+                { name: 'NBA', url: 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard' },
+                { name: 'MLB', url: 'https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard' },
+                { name: 'NHL', url: 'https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard' }
+            ];
+
+            const favoriteAbbrs = new Set(['NYG', 'NYK', 'NYR', 'NYY']);
+
+            container.innerHTML = `
+                <div class="scoreboard-toolbar">
+                    <span class="scoreboard-updated">Loading live scores...</span>
+                    <button id="refresh-scores-btn" type="button">↻ Refresh Scores</button>
+                </div>
+                <div id="scoreboard-sections"></div>
+            `;
+
+            const sectionsEl = document.getElementById('scoreboard-sections');
+            const updatedEl = container.querySelector('.scoreboard-updated');
+            const refreshBtn = document.getElementById('refresh-scores-btn');
+            if (refreshBtn) {
+                refreshBtn.onclick = () => renderSportsScoreboard(container);
+            }
+
+            try {
+                const results = await Promise.allSettled(
+                    leagues.map(async (lg) => {
+                        const res = await fetch(lg.url);
+                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                        const data = await res.json();
+                        return { name: lg.name, events: data.events || [] };
+                    })
+                );
+
+                let html = '';
+
+                results.forEach((result) => {
+                    if (result.status !== 'fulfilled') return;
+                    const { name, events } = result.value;
+
+                    html += `<section class="scoreboard-league">`;
+                    html += `<h2 class="scoreboard-league-title">${name}</h2>`;
+
+                    if (!events.length) {
+                        html += `<p class="scoreboard-empty">No games scheduled on the current scoreboard.</p>`;
+                        html += `</section>`;
+                        return;
+                    }
+
+                    html += `<div class="scoreboard-grid">`;
+
+                    events.forEach((ev) => {
+                        const comp = ev.competitions?.at(0);
+                        if (!comp) return;
+
+                        const competitors = comp.competitors || [];
+                        const away = competitors.find(c => c.homeAway === 'away') || competitors.at(1);
+                        const home = competitors.find(c => c.homeAway === 'home') || competitors.at(0);
+                        if (!away || !home) return;
+
+                        const statusType = comp.status?.type || ev.status?.type || {};
+                        const state = statusType.state;
+                        const statusText = statusType.shortDetail || statusType.detail || '';
+                        const broadcast = comp.broadcast || comp.broadcasts?.at(0)?.names?.at(0) || '';
+                        const gameLink = ev.links?.find(l => l.rel?.includes('summary'))?.href || '#';
+
+                        const isFavGame = favoriteAbbrs.has(away.team?.abbreviation) || favoriteAbbrs.has(home.team?.abbreviation);
+
+                        const renderTeamRow = (teamObj) => {
+                            const abbr = teamObj.team?.abbreviation || '';
+                            const teamName = teamObj.team?.shortDisplayName || teamObj.team?.displayName || abbr;
+                            const logo = teamObj.team?.logo || '';
+                            const record = teamObj.records?.at(0)?.summary || '';
+                            const score = state === 'pre' ? '-' : (teamObj.score ?? '0');
+                            const isWinner = state === 'post' && teamObj.winner;
+
+                            return `
+                                <div class="sb-team-row ${isWinner ? 'sb-winner' : ''}">
+                                    <div class="sb-team-info">
+                                        ${logo ? `<img src="${logo}" alt="${abbr}" class="sb-team-logo" loading="lazy">` : ''}
+                                        <span class="sb-team-name">${teamName}</span>
+                                        ${record ? `<span class="sb-team-record">(${record})</span>` : ''}
+                                    </div>
+                                    <span class="sb-team-score">${score}</span>
+                                </div>
+                            `;
+                        };
+
+                        html += `
+                            <a href="${gameLink}" target="_blank" rel="noopener" class="sb-card ${state === 'in' ? 'sb-live' : ''} ${isFavGame ? 'sb-favorite' : ''}">
+                                <div class="sb-card-header">
+                                    <span class="sb-status ${state === 'in' ? 'sb-status-live' : ''}">${state === 'in' ? '● ' : ''}${statusText}</span>
+                                    ${broadcast ? `<span class="sb-broadcast">${broadcast}</span>` : ''}
+                                </div>
+                                ${renderTeamRow(away)}
+                                ${renderTeamRow(home)}
+                            </a>
+                        `;
+                    });
+
+                    html += `</div></section>`;
+                });
+
+                sectionsEl.innerHTML = html;
+                if (updatedEl) {
+                    updatedEl.textContent = `Updated at ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+                }
+                scrollToTop();
+            } catch (err) {
+                console.error('Failed to load sports scores:', err);
+                sectionsEl.innerHTML = `<p class="scoreboard-empty">Unable to load sports scores right now.</p>`;
+            }
+        }
+
+        //#####
+
         function scrollToTop() {
             const mainContent = document.querySelector('.main-content');
             if (mainContent) {
@@ -477,6 +594,12 @@
                 feedTitle.textContent = title;
                 inputGroup.style.display = 'none';
                 renderIframe(feedContainer, url);
+                return;
+            }
+            if (url === 'scoreboard://all') {
+                feedTitle.textContent = title || 'Sports Scores';
+                inputGroup.style.display = 'none';
+                renderSportsScoreboard(feedContainer);
                 return;
             }
 
@@ -1013,6 +1136,17 @@
                 });
                 sidebarContent.appendChild(ul);
             });
+            const lastUl = sidebarContent.querySelector('ul:last-of-type');
+            if (lastUl) {
+                const li = document.createElement('li');
+                const a = document.createElement('a');
+                a.href = '#';
+                a.textContent = 'Sports Scores';
+                a.setAttribute('data-feed', 'scoreboard://all');
+                a.setAttribute('data-title', 'Sports Scores');
+                li.appendChild(a);
+                lastUl.appendChild(li);
+            }
             CRITICAL_FEEDS = allFeeds; // All feeds are now considered critical for prefetching
         }
 

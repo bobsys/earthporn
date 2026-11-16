@@ -709,3 +709,143 @@ footer {
     opacity: 1;
     transform: translateY(0);
 }
+/* --- SPORTS SCOREBOARD --- */
+.scoreboard-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+    padding: 10px 14px;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+}
+
+.scoreboard-updated {
+    font-size: 0.88em;
+    color: var(--text-muted);
+    font-weight: 500;
+}
+
+#refresh-scores-btn {
+    padding: 7px 14px;
+    font-size: 0.88em;
+}
+
+.scoreboard-league {
+    margin-bottom: 26px;
+}
+
+.scoreboard-league-title {
+    font-size: 1.15em;
+    font-weight: 700;
+    color: var(--accent-title);
+    letter-spacing: 0.05em;
+    margin-bottom: 12px;
+    padding-bottom: 6px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.scoreboard-empty {
+    color: var(--text-muted);
+    font-size: 0.92em;
+    padding: 8px 4px;
+}
+
+.scoreboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(265px, 1fr));
+    gap: 12px;
+}
+
+.sb-card {
+    display: block;
+    text-decoration: none;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 12px 14px;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.15s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.sb-card:hover {
+    background: var(--bg-card-hover);
+    border-color: var(--accent-primary);
+    transform: translateY(-2px);
+}
+
+.sb-card.sb-favorite {
+    border-left: 4px solid var(--accent-title);
+}
+
+.sb-card.sb-live {
+    border-color: #ff6b6b;
+}
+
+.sb-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.78em;
+    margin-bottom: 10px;
+    color: var(--text-muted);
+    font-weight: 600;
+}
+
+.sb-status-live {
+    color: #ff6b6b;
+    font-weight: 700;
+}
+
+.sb-broadcast {
+    background: var(--bg-header-pill);
+    color: var(--text-secondary);
+    padding: 2px 7px;
+    border-radius: 4px;
+}
+
+.sb-team-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 4px 0;
+    color: var(--text-secondary);
+}
+
+.sb-team-row.sb-winner {
+    color: var(--text-primary);
+    font-weight: 700;
+}
+
+.sb-team-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+}
+
+.sb-team-logo {
+    width: 22px;
+    height: 22px;
+    object-fit: contain;
+    flex-shrink: 0;
+}
+
+.sb-team-name {
+    font-size: 0.95em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.sb-team-record {
+    font-size: 0.8em;
+    color: var(--text-muted);
+}
+
+.sb-team-score {
+    font-size: 1.05em;
+    font-variant-numeric: tabular-nums;
+    margin-left: 8px;
+}
