@@ -447,7 +447,7 @@
 
         //#####
 
-async function renderSportsScoreboard(container, viewMode = 'scores') {
+        async function renderSportsScoreboard(container, viewMode = 'scores') {
             const leagues = [
                 { name: 'NFL', sport: 'football', league: 'nfl' },
                 { name: 'NBA', sport: 'basketball', league: 'nba' },
@@ -479,7 +479,6 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
             try {
                 const results = await Promise.allSettled(
                     leagues.map(async (lg) => {
-                        // Added level=3 parameter to force ESPN to expose division-level nodes
                         const url = viewMode === 'scores' 
                             ? `https://site.api.espn.com/apis/site/v2/sports/${lg.sport}/${lg.league}/scoreboard`
                             : `https://site.api.espn.com/apis/v2/sports/${lg.sport}/${lg.league}/standings?level=3`;
@@ -524,57 +523,72 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
                         });
                         html += `</div>`;
                     } else {
-                        // Standings View: Thoroughly extract division children blocks
+                        // Standings View: Nested Conference Tiles with Division Sub-Tiles
                         const standingsGroups = data.standings || data.children || [];
                         if (!standingsGroups.length) {
                             html += `<p class="scoreboard-empty">Standings unavailable.</p></section>`;
                             return;
                         }
 
-                        html += `<div class="scoreboard-grid">`;
+                        html += `<div style="display: flex; flex-direction: column; gap: 16px;">`;
 
-                        const parseStandingsNode = (node, parentName = '') => {
-                            const groupName = node.name || '';
-                            const fullName = parentName && groupName ? `${parentName} — ${groupName}` : (groupName || parentName);
-                            const entries = node.standings?.entries || node.entries || [];
-                            const children = node.children || [];
+                        standingsGroups.forEach((confNode) => {
+                            const confName = confNode.name || 'Conference';
+                            const confChildren = confNode.children || [];
 
-                            // If this node has teams, render its card panel
-                            if (entries.length > 0) {
-                                html += `
-                                    <div class="sb-card" style="padding: 14px;">
-                                        <div style="font-size: 0.95em; font-weight: 700; color: var(--accent-title); margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border-color);">${fullName || 'Standings'}</div>
-                                        <div style="display: flex; flex-direction: column; gap: 6px;">
-                                `;
+                            html += `
+                                <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; box-shadow: var(--shadow-sm);">
+                                    <div style="font-size: 1.1em; font-weight: 700; color: var(--accent-title); margin-bottom: 14px; padding-bottom: 6px; border-bottom: 2px solid var(--border-color); letter-spacing: 0.04em;">${confName}</div>
+                                    <div class="scoreboard-grid" style="margin-bottom: 0;">
+                            `;
 
-                                entries.forEach((entry) => {
-                                    const teamName = entry.team?.displayName || entry.team?.shortDisplayName || '';
-                                    const logo = entry.team?.logo || '';
-                                    const stats = entry.stats || [];
-                                    const getStat = (stName) => stats.find(s => s.name === stName)?.displayValue || '';
-                                    const record = getStat('overall') || `${getStat('wins')}-${getStat('losses')}`;
+                            // Helper to gather division/sub-group cards recursively inside this conference
+                            const renderDivisions = (node) => {
+                                const entries = node.standings?.entries || node.entries || [];
+                                const subGroups = node.children || [];
 
+                                if (entries.length > 0) {
+                                    const divName = node.name || 'Division';
                                     html += `
-                                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9em; padding: 3px 0; color: var(--text-secondary);">
-                                            <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
-                                                ${logo ? `<img src="${logo}" alt="" style="width: 18px; height: 18px; object-fit: contain; flex-shrink: 0;">` : ''}
-                                                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary);">${teamName}</span>
-                                            </div>
-                                            <span style="font-variant-numeric: tabular-nums; font-weight: 600; margin-left: 12px; flex-shrink: 0;">${record}</span>
-                                        </div>
+                                        <div class="sb-card" style="padding: 14px; margin-bottom: 0; background: var(--bg-body);">
+                                            <div style="font-size: 0.9em; font-weight: 700; color: var(--accent-primary); margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border-color);">${divName}</div>
+                                            <div style="display: flex; flex-direction: column; gap: 6px;">
                                     `;
-                                });
 
-                                html += `</div></div>`;
+                                    entries.forEach((entry) => {
+                                        const teamName = entry.team?.displayName || entry.team?.shortDisplayName || '';
+                                        const logo = entry.team?.logo || '';
+                                        const stats = entry.stats || [];
+                                        const getStat = (stName) => stats.find(s => s.name === stName)?.displayValue || '';
+                                        const record = getStat('overall') || `${getStat('wins')}-${getStat('losses')}`;
+
+                                        html += `
+                                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9em; padding: 3px 0; color: var(--text-secondary);">
+                                                <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                                                    ${logo ? `<img src="${logo}" alt="" style="width: 18px; height: 18px; object-fit: contain; flex-shrink: 0;">` : ''}
+                                                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary);">${teamName}</span>
+                                                </div>
+                                                <span style="font-variant-numeric: tabular-nums; font-weight: 600; margin-left: 12px; flex-shrink: 0;">${record}</span>
+                                            </div>
+                                        `;
+                                    });
+
+                                    html += `</div></div>`;
+                                }
+
+                                subGroups.forEach(sub => renderDivisions(sub));
+                            };
+
+                            if (confChildren.length > 0) {
+                                confChildren.forEach(child => renderDivisions(child));
+                            } else {
+                                // Fallback if conference has direct team entries instead of sub-divisions
+                                renderDivisions(confNode);
                             }
 
-                            // Recursively check any lower-level children divisions
-                            if (children.length > 0) {
-                                children.forEach(child => parseStandingsNode(child, fullName));
-                            }
-                        };
+                            html += `</div></div>`;
+                        });
 
-                        standingsGroups.forEach(group => parseStandingsNode(group));
                         html += `</div>`;
                     }
 
@@ -591,6 +605,7 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
                 sectionsEl.innerHTML = `<p class="scoreboard-empty">Unable to load sports data right now.</p>`;
             }
         }
+        
         //#####
 
         function scrollToTop() {
