@@ -479,10 +479,10 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
             try {
                 const results = await Promise.allSettled(
                     leagues.map(async (lg) => {
-                        // Corrected endpoint paths: use site/v2 for scores, v2 (no site) for standings
+                        // Added level=3 parameter to force ESPN to expose division-level nodes
                         const url = viewMode === 'scores' 
                             ? `https://site.api.espn.com/apis/site/v2/sports/${lg.sport}/${lg.league}/scoreboard`
-                            : `https://site.api.espn.com/apis/v2/sports/${lg.sport}/${lg.league}/standings`;
+                            : `https://site.api.espn.com/apis/v2/sports/${lg.sport}/${lg.league}/standings?level=3`;
                         const res = await fetch(url);
                         if (!res.ok) throw new Error(`HTTP ${res.status}`);
                         const data = await res.json();
@@ -524,7 +524,7 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
                         });
                         html += `</div>`;
                     } else {
-                        // Standings View: Recursive breakdown into conferences and divisions
+                        // Standings View: Thoroughly extract division children blocks
                         const standingsGroups = data.standings || data.children || [];
                         if (!standingsGroups.length) {
                             html += `<p class="scoreboard-empty">Standings unavailable.</p></section>`;
@@ -533,15 +533,17 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
 
                         html += `<div class="scoreboard-grid">`;
 
-                        const renderDivisionCard = (node, parentTitle = '') => {
+                        const parseStandingsNode = (node, parentName = '') => {
+                            const groupName = node.name || '';
+                            const fullName = parentName && groupName ? `${parentName} — ${groupName}` : (groupName || parentName);
                             const entries = node.standings?.entries || node.entries || [];
-                            const subGroups = node.children || [];
-                            const currentTitle = parentTitle ? `${parentTitle} - ${node.name}` : (node.name || '');
+                            const children = node.children || [];
 
+                            // If this node has teams, render its card panel
                             if (entries.length > 0) {
                                 html += `
                                     <div class="sb-card" style="padding: 14px;">
-                                        <div style="font-size: 0.95em; font-weight: 700; color: var(--accent-title); margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border-color);">${currentTitle || 'Standings'}</div>
+                                        <div style="font-size: 0.95em; font-weight: 700; color: var(--accent-title); margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border-color);">${fullName || 'Standings'}</div>
                                         <div style="display: flex; flex-direction: column; gap: 6px;">
                                 `;
 
@@ -566,12 +568,13 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
                                 html += `</div></div>`;
                             }
 
-                            subGroups.forEach(sub => {
-                                renderDivisionCard(sub, currentTitle);
-                            });
+                            // Recursively check any lower-level children divisions
+                            if (children.length > 0) {
+                                children.forEach(child => parseStandingsNode(child, fullName));
+                            }
                         };
 
-                        standingsGroups.forEach(group => renderDivisionCard(group));
+                        standingsGroups.forEach(group => parseStandingsNode(group));
                         html += `</div>`;
                     }
 
@@ -588,7 +591,6 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
                 sectionsEl.innerHTML = `<p class="scoreboard-empty">Unable to load sports data right now.</p>`;
             }
         }
-
         //#####
 
         function scrollToTop() {
