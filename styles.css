@@ -212,15 +212,19 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    outline: none; /* Prevents ugly default browser bounding boxes */
 }
 
-.sidebar a:hover,
+.sidebar a:hover {
+    background-color: var(--bg-header-pill);
+    color: var(--text-primary);
+}
+
 .sidebar a.active {
     background-color: var(--bg-header-pill);
     color: var(--text-primary);
     border-left-color: var(--accent-primary);
 }
-
 .sidebar a.disabled {
     color: var(--text-muted);
     opacity: 0.55;

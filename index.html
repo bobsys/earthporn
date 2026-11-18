@@ -1257,7 +1257,7 @@
             CRITICAL_FEEDS = allFeeds; // All feeds are now considered critical for prefetching
         }
 
-        function handleSidebarClick(e, link) {
+function handleSidebarClick(e, link) {
             const feedUrl = link.getAttribute('data-feed');
             const hrefUrl = link.getAttribute('href');
             const feedTitle = link.getAttribute('data-title');
@@ -1265,8 +1265,25 @@
 
             if (!managementUrl) return;
 
-            document.querySelectorAll('.sidebar a').forEach(l => l.classList.remove('active'));
-            link.classList.add('active');
+            // Determine if this link opens an in-panel view (Sports Scores or local .html tools like Old Weather)
+            const isInPanelMode = feedUrl === 'scoreboard://all' || managementUrl.endsWith('.html');
+
+            if (isInPanelMode) {
+                // Keep active outline/state for right-panel modes
+                document.querySelectorAll('.sidebar a').forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+            } else {
+                // For standard feeds, temporarily highlight or clear outline after launch as requested
+                document.querySelectorAll('.sidebar a').forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+                // Optional: if you want regular feeds to clear their active highlight shortly after loading:
+                setTimeout(() => {
+                    if (!link.getAttribute('data-feed')?.endsWith('.html') && link.getAttribute('data-feed') !== 'scoreboard://all') {
+                        // Keeps current topic tracking clean
+                    }
+                }, 300);
+            }
+
             rssInput.value = managementUrl;
             updateFavoriteIconsState(managementUrl);
 
@@ -1279,6 +1296,9 @@
                 }
                 fetchFeed(feedUrl, feedTitle, link);
             }
+
+            // Blur the link element to clear any lingering browser focus ring outline
+            link.blur();
 
             if (window.innerWidth <= 600) {
                 const sidebar = document.querySelector('.sidebar');
@@ -1294,7 +1314,7 @@
                 localStorage.setItem('sidebarState', 'hidden');
             }
         }
-
+        
         function updateFavoriteIconsState(currentUrl) {
             const heartButton = document.getElementById('add-to-favorites');
             const deleteButton = document.getElementById('delete-from-favorites');
