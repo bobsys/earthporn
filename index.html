@@ -442,120 +442,125 @@
 
         //#####
 
-        async function renderSportsScoreboard(container) {
-            const leagues = [
-                { name: 'NFL', url: 'https://site.api.espn.com/apis/site/v2/sports/football/nfl/scoreboard' },
-                { name: 'NBA', url: 'https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard' },
-                { name: 'MLB', url: 'https://site.api.espn.com/apis/site/v2/sports/baseball/mlb/scoreboard' },
-                { name: 'NHL', url: 'https://site.api.espn.com/apis/site/v2/sports/hockey/nhl/scoreboard' }
-            ];
+    async function renderSportsScoreboard(container, viewMode = 'scores') {
+        const leagues = [
+            { name: 'NFL', sport: 'football', league: 'nfl' },
+            { name: 'NBA', sport: 'basketball', league: 'nba' },
+            { name: 'MLB', sport: 'baseball', league: 'mlb' },
+            { name: 'NHL', sport: 'hockey', league: 'nhl' }
+        ];
 
-            const favoriteAbbrs = new Set(['NYG', 'NYK', 'NYR', 'NYY']);
-
-            container.innerHTML = `
-                <div class="scoreboard-toolbar">
-                    <span class="scoreboard-updated">Loading live scores...</span>
-                    <button id="refresh-scores-btn" type="button">↻ Refresh Scores</button>
+        container.innerHTML = `
+            <div class="scoreboard-toolbar">
+                <span class="scoreboard-updated">Loading ${viewMode}...</span>
+                <div style="display: flex; gap: 8px;">
+                    <button id="toggle-view-btn" type="button">${viewMode === 'scores' ? '📊 Show Standings' : '🏈 Show Scores'}</button>
+                    <button id="refresh-scores-btn" type="button">↻ Refresh</button>
                 </div>
-                <div id="scoreboard-sections"></div>
-            `;
+            </div>
+            <div id="scoreboard-sections"></div>
+        `;
 
-            const sectionsEl = document.getElementById('scoreboard-sections');
-            const updatedEl = container.querySelector('.scoreboard-updated');
-            const refreshBtn = document.getElementById('refresh-scores-btn');
-            if (refreshBtn) {
-                refreshBtn.onclick = () => renderSportsScoreboard(container);
-            }
+        const sectionsEl = document.getElementById('scoreboard-sections');
+        const updatedEl = container.querySelector('.scoreboard-updated');
+        
+        document.getElementById('toggle-view-btn').onclick = () => {
+            renderSportsScoreboard(container, viewMode === 'scores' ? 'standings' : 'scores');
+        };
+        document.getElementById('refresh-scores-btn').onclick = () => {
+            renderSportsScoreboard(container, viewMode);
+        };
 
-            try {
-                const results = await Promise.allSettled(
-                    leagues.map(async (lg) => {
-                        const res = await fetch(lg.url);
-                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                        const data = await res.json();
-                        return { name: lg.name, events: data.events || [] };
-                    })
-                );
+        try {
+            const results = await Promise.allSettled(
+                leagues.map(async (lg) => {
+                    const url = viewMode === 'scores' 
+                        ? `https://site.api.espn.com/apis/site/v2/sports/${lg.sport}/${lg.league}/scoreboard`
+                        : `https://site.api.espn.com/apis/v2/sports/${lg.sport}/${lg.league}/standings`;
+                    const res = await fetch(url);
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    const data = await res.json();
+                    return { name: lg.name, data, viewMode };
+                })
+            );
 
-                let html = '';
+            let html = '';
 
-                results.forEach((result) => {
-                    if (result.status !== 'fulfilled') return;
-                    const { name, events } = result.value;
+            results.forEach((result) => {
+                if (result.status !== 'fulfilled') return;
+                const { name, data, viewMode } = result.value;
 
-                    html += `<section class="scoreboard-league">`;
-                    html += `<h2 class="scoreboard-league-title">${name}</h2>`;
+                html += `<section class="scoreboard-league">`;
+                html += `<h2 class="scoreboard-league-title">${name}</h2>`;
 
+                if (viewMode === 'scores') {
+                    const events = data.events || [];
                     if (!events.length) {
-                        html += `<p class="scoreboard-empty">No games scheduled on the current scoreboard.</p>`;
-                        html += `</section>`;
+                        html += `<p class="scoreboard-empty">No games scheduled today.</p></section>`;
                         return;
                     }
-
                     html += `<div class="scoreboard-grid">`;
-
                     events.forEach((ev) => {
                         const comp = ev.competitions?.at(0);
                         if (!comp) return;
-
-                        const competitors = comp.competitors || [];
-                        const away = competitors.find(c => c.homeAway === 'away') || competitors.at(1);
-                        const home = competitors.find(c => c.homeAway === 'home') || competitors.at(0);
+                        const away = comp.competitors.find(c => c.homeAway === 'away');
+                        const home = comp.competitors.find(c => c.homeAway === 'home');
                         if (!away || !home) return;
 
-                        const statusType = comp.status?.type || ev.status?.type || {};
-                        const state = statusType.state;
-                        const statusText = statusType.shortDetail || statusType.detail || '';
-                        const broadcast = comp.broadcast || comp.broadcasts?.at(0)?.names?.at(0) || '';
-                        const gameLink = ev.links?.find(l => l.rel?.includes('summary'))?.href || '#';
-
-                        const isFavGame = favoriteAbbrs.has(away.team?.abbreviation) || favoriteAbbrs.has(home.team?.abbreviation);
-
-                        const renderTeamRow = (teamObj) => {
-                            const abbr = teamObj.team?.abbreviation || '';
-                            const teamName = teamObj.team?.shortDisplayName || teamObj.team?.displayName || abbr;
-                            const logo = teamObj.team?.logo || '';
-                            const record = teamObj.records?.at(0)?.summary || '';
-                            const score = state === 'pre' ? '-' : (teamObj.score ?? '0');
-                            const isWinner = state === 'post' && teamObj.winner;
-
-                            return `
-                                <div class="sb-team-row ${isWinner ? 'sb-winner' : ''}">
-                                    <div class="sb-team-info">
-                                        ${logo ? `<img src="${logo}" alt="${abbr}" class="sb-team-logo" loading="lazy">` : ''}
-                                        <span class="sb-team-name">${teamName}</span>
-                                        ${record ? `<span class="sb-team-record">(${record})</span>` : ''}
-                                    </div>
-                                    <span class="sb-team-score">${score}</span>
-                                </div>
-                            `;
-                        };
-
+                        const statusText = comp.status?.type?.shortDetail || '';
                         html += `
-                            <a href="${gameLink}" target="_blank" rel="noopener" class="sb-card ${state === 'in' ? 'sb-live' : ''} ${isFavGame ? 'sb-favorite' : ''}">
-                                <div class="sb-card-header">
-                                    <span class="sb-status ${state === 'in' ? 'sb-status-live' : ''}">${state === 'in' ? '● ' : ''}${statusText}</span>
-                                    ${broadcast ? `<span class="sb-broadcast">${broadcast}</span>` : ''}
-                                </div>
-                                ${renderTeamRow(away)}
-                                ${renderTeamRow(home)}
-                            </a>
+                            <div class="sb-card">
+                                <div class="sb-card-header"><span>${statusText}</span></div>
+                                <div class="sb-team-row"><span>${away.team.shortDisplayName}</span><span>${away.score ?? '-'}</span></div>
+                                <div class="sb-team-row"><span>${home.team.shortDisplayName}</span><span>${home.score ?? '-'}</span></div>
+                            </div>
                         `;
                     });
+                    html += `</div>`;
+                } else {
+                    // Standings View Parsing
+                    const standingsGroups = data.standings || data.children || [];
+                    if (!standingsGroups.length) {
+                        html += `<p class="scoreboard-empty">Standings unavailable.</p></section>`;
+                        return;
+                    }
 
-                    html += `</div></section>`;
-                });
+                    html += `<div class="scoreboard-grid" style="grid-template-columns: 1fr;">`;
+                    standingsGroups.forEach((group) => {
+                        html += `<div style="margin-bottom: 10px; font-weight: 600; color: var(--accent-primary);">${group.name || 'Standings'}</div>`;
+                        html += `<table style="width: 100%; font-size: 0.9em; margin-bottom: 12px; border-collapse: collapse;">`;
+                        html += `<tr style="border-bottom: 1px solid var(--border-color); text-align: left; color: var(--text-muted);"><th>Team</th><th style="text-align: right;">W-L</th></tr>`;
+                        
+                        const entries = group.standings?.entries || group.entries || [];
+                        entries.forEach((entry) => {
+                            const teamName = entry.team?.displayName || '';
+                            const stats = entry.stats || [];
+                            const getStat = (name) => stats.find(s => s.name === name)?.displayValue || '';
+                            const record = getStat('overall') || `${getStat('wins')}-${getStat('losses')}`;
 
-                sectionsEl.innerHTML = html;
-                if (updatedEl) {
-                    updatedEl.textContent = `Updated at ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+                            html += `<tr style="border-bottom: 1px solid var(--border-color);">
+                                <td style="padding: 4px 0;">${teamName}</td>
+                                <td style="text-align: right; font-variant-numeric: tabular-nums;">${record}</td>
+                            </tr>`;
+                        });
+                        html += `</table>`;
+                    });
+                    html += `</div>`;
                 }
-                scrollToTop();
-            } catch (err) {
-                console.error('Failed to load sports scores:', err);
-                sectionsEl.innerHTML = `<p class="scoreboard-empty">Unable to load sports scores right now.</p>`;
+
+                html += `</section>`;
+            });
+
+            sectionsEl.innerHTML = html;
+            if (updatedEl) {
+                updatedEl.textContent = `Updated at ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
             }
+            scrollToTop();
+        } catch (err) {
+            console.error('Failed to load sports data:', err);
+            sectionsEl.innerHTML = `<p class="scoreboard-empty">Unable to load sports data right now.</p>`;
         }
+    }
 
         //#####
 
