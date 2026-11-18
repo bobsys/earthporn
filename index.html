@@ -124,7 +124,7 @@
 
     (function() {
         // --- APPLICATION VERSION ---
-        const APP_VERSION = "11162026";
+        const APP_VERSION = "11182026";
 
         // --- STATE MANAGEMENT ---
         let prefetchedFeeds = new Set();
@@ -474,9 +474,10 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
             try {
                 const results = await Promise.allSettled(
                     leagues.map(async (lg) => {
+                        // Added level=3 to force ESPN to expose deep division/group nodes
                         const url = viewMode === 'scores' 
                             ? `https://site.api.espn.com/apis/site/v2/sports/${lg.sport}/${lg.league}/scoreboard`
-                            : `https://site.api.espn.com/apis/v2/sports/${lg.sport}/${lg.league}/standings`;
+                            : `https://site.api.espn.com/apis/site/v2/sports/${lg.sport}/${lg.league}/standings?level=3`;
                         const res = await fetch(url);
                         if (!res.ok) throw new Error(`HTTP ${res.status}`);
                         const data = await res.json();
@@ -518,7 +519,7 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
                         });
                         html += `</div>`;
                     } else {
-                        // Standings View: Recursively parse sub-groups and divisions
+                        // Standings View: Deep hierarchical parsing
                         const standingsGroups = data.standings || data.children || [];
                         if (!standingsGroups.length) {
                             html += `<p class="scoreboard-empty">Standings unavailable.</p></section>`;
@@ -527,15 +528,16 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
 
                         html += `<div class="scoreboard-grid">`;
 
-                        const collectDivisionCards = (node) => {
+                        const renderDivisionCard = (node, parentTitle = '') => {
                             const entries = node.standings?.entries || node.entries || [];
                             const subGroups = node.children || [];
+                            const currentTitle = parentTitle ? `${parentTitle} - ${node.name}` : (node.name || '');
 
+                            // If this node has direct team entries, render a card panel for it
                             if (entries.length > 0) {
-                                const divisionName = node.name || 'Standings';
                                 html += `
                                     <div class="sb-card" style="padding: 14px;">
-                                        <div style="font-size: 0.95em; font-weight: 700; color: var(--accent-title); margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border-color);">${divisionName}</div>
+                                        <div style="font-size: 0.95em; font-weight: 700; color: var(--accent-title); margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border-color);">${currentTitle || 'Standings'}</div>
                                         <div style="display: flex; flex-direction: column; gap: 6px;">
                                 `;
 
@@ -560,10 +562,13 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
                                 html += `</div></div>`;
                             }
 
-                            subGroups.forEach(sub => collectDivisionCards(sub));
+                            // Recursively check children sub-groups (divisions)
+                            subGroups.forEach(sub => {
+                                renderDivisionCard(sub, currentTitle);
+                            });
                         };
 
-                        standingsGroups.forEach(group => collectDivisionCards(group));
+                        standingsGroups.forEach(group => renderDivisionCard(group));
                         html += `</div>`;
                     }
 
@@ -580,7 +585,7 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
                 sectionsEl.innerHTML = `<p class="scoreboard-empty">Unable to load sports data right now.</p>`;
             }
         }
-                
+        
         //#####
 
         function scrollToTop() {
