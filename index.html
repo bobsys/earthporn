@@ -523,7 +523,6 @@
                         });
                         html += `</div>`;
                     } else {
-                        // Standings View: Nested Conference Tiles with Division Sub-Tiles
                         const standingsGroups = data.standings || data.children || [];
                         if (!standingsGroups.length) {
                             html += `<p class="scoreboard-empty">Standings unavailable.</p></section>`;
@@ -542,12 +541,26 @@
                                     <div class="scoreboard-grid" style="margin-bottom: 0;">
                             `;
 
-                            // Helper to gather division/sub-group cards recursively inside this conference
                             const renderDivisions = (node) => {
                                 const entries = node.standings?.entries || node.entries || [];
                                 const subGroups = node.children || [];
 
                                 if (entries.length > 0) {
+                                    // Sort entries by winning percentage (descending), falling back to wins
+                                    const sortedEntries = [...entries].sort((a, b) => {
+                                        const getStatVal = (statsList, statName) => {
+                                            const s = statsList.find(st => st.name === statName);
+                                            return s ? parseFloat(s.value) : 0;
+                                        };
+                                        const wpA = getStatVal(a.stats || [], 'winPercent');
+                                        const wpB = getStatVal(b.stats || [], 'winPercent');
+                                        if (wpA !== wpB) return wpB - wpA;
+
+                                        const wA = getStatVal(a.stats || [], 'wins');
+                                        const wB = getStatVal(b.stats || [], 'wins');
+                                        return wB - wA;
+                                    });
+
                                     const divName = node.name || 'Division';
                                     html += `
                                         <div class="sb-card" style="padding: 14px; margin-bottom: 0; background: var(--bg-body);">
@@ -555,7 +568,7 @@
                                             <div style="display: flex; flex-direction: column; gap: 6px;">
                                     `;
 
-                                    entries.forEach((entry) => {
+                                    sortedEntries.forEach((entry) => {
                                         const teamName = entry.team?.displayName || entry.team?.shortDisplayName || '';
                                         const logo = entry.team?.logo || '';
                                         const stats = entry.stats || [];
@@ -582,7 +595,6 @@
                             if (confChildren.length > 0) {
                                 confChildren.forEach(child => renderDivisions(child));
                             } else {
-                                // Fallback if conference has direct team entries instead of sub-divisions
                                 renderDivisions(confNode);
                             }
 
@@ -605,7 +617,7 @@
                 sectionsEl.innerHTML = `<p class="scoreboard-empty">Unable to load sports data right now.</p>`;
             }
         }
-        
+
         //#####
 
         function scrollToTop() {
