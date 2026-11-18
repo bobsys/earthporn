@@ -518,7 +518,7 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
                         });
                         html += `</div>`;
                     } else {
-                        // Standings View: Group by children/conferences/divisions into individual panels
+                        // Standings View: Recursively parse sub-groups and divisions
                         const standingsGroups = data.standings || data.children || [];
                         if (!standingsGroups.length) {
                             html += `<p class="scoreboard-empty">Standings unavailable.</p></section>`;
@@ -527,16 +527,15 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
 
                         html += `<div class="scoreboard-grid">`;
 
-                        // Helper to recursively flatten or extract division groupings
-                        const processGroup = (groupNode, parentName = '') => {
-                            const groupName = parentName ? `${parentName} - ${groupNode.name}` : (groupNode.name || 'Standings');
-                            const subGroups = groupNode.children || [];
-                            const entries = groupNode.standings?.entries || groupNode.entries || [];
+                        const collectDivisionCards = (node) => {
+                            const entries = node.standings?.entries || node.entries || [];
+                            const subGroups = node.children || [];
 
                             if (entries.length > 0) {
+                                const divisionName = node.name || 'Standings';
                                 html += `
                                     <div class="sb-card" style="padding: 14px;">
-                                        <div style="font-size: 0.95em; font-weight: 700; color: var(--accent-title); margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border-color);">${groupName}</div>
+                                        <div style="font-size: 0.95em; font-weight: 700; color: var(--accent-title); margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border-color);">${divisionName}</div>
                                         <div style="display: flex; flex-direction: column; gap: 6px;">
                                 `;
 
@@ -561,10 +560,10 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
                                 html += `</div></div>`;
                             }
 
-                            subGroups.forEach(sub => processGroup(sub, groupNode.name && !parentName ? groupNode.name : parentName));
+                            subGroups.forEach(sub => collectDivisionCards(sub));
                         };
 
-                        standingsGroups.forEach(group => processGroup(group));
+                        standingsGroups.forEach(group => collectDivisionCards(group));
                         html += `</div>`;
                     }
 
@@ -581,7 +580,7 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
                 sectionsEl.innerHTML = `<p class="scoreboard-empty">Unable to load sports data right now.</p>`;
             }
         }
-        
+                
         //#####
 
         function scrollToTop() {
