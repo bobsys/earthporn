@@ -442,126 +442,146 @@
 
         //#####
 
-    async function renderSportsScoreboard(container, viewMode = 'scores') {
-        const leagues = [
-            { name: 'NFL', sport: 'football', league: 'nfl' },
-            { name: 'NBA', sport: 'basketball', league: 'nba' },
-            { name: 'MLB', sport: 'baseball', league: 'mlb' },
-            { name: 'NHL', sport: 'hockey', league: 'nhl' }
-        ];
+async function renderSportsScoreboard(container, viewMode = 'scores') {
+            const leagues = [
+                { name: 'NFL', sport: 'football', league: 'nfl' },
+                { name: 'NBA', sport: 'basketball', league: 'nba' },
+                { name: 'MLB', sport: 'baseball', league: 'mlb' },
+                { name: 'NHL', sport: 'hockey', league: 'nhl' }
+            ];
 
-        container.innerHTML = `
-            <div class="scoreboard-toolbar">
-                <span class="scoreboard-updated">Loading ${viewMode}...</span>
-                <div style="display: flex; gap: 8px;">
-                    <button id="toggle-view-btn" type="button">${viewMode === 'scores' ? '📊 Show Standings' : '🏈 Show Scores'}</button>
-                    <button id="refresh-scores-btn" type="button">↻ Refresh</button>
+            container.innerHTML = `
+                <div class="scoreboard-toolbar">
+                    <span class="scoreboard-updated">Loading ${viewMode}...</span>
+                    <div style="display: flex; gap: 8px;">
+                        <button id="toggle-view-btn" type="button">${viewMode === 'scores' ? '📊 Show Standings' : '🏈 Show Scores'}</button>
+                        <button id="refresh-scores-btn" type="button">↻ Refresh</button>
+                    </div>
                 </div>
-            </div>
-            <div id="scoreboard-sections"></div>
-        `;
+                <div id="scoreboard-sections"></div>
+            `;
 
-        const sectionsEl = document.getElementById('scoreboard-sections');
-        const updatedEl = container.querySelector('.scoreboard-updated');
-        
-        document.getElementById('toggle-view-btn').onclick = () => {
-            renderSportsScoreboard(container, viewMode === 'scores' ? 'standings' : 'scores');
-        };
-        document.getElementById('refresh-scores-btn').onclick = () => {
-            renderSportsScoreboard(container, viewMode);
-        };
+            const sectionsEl = document.getElementById('scoreboard-sections');
+            const updatedEl = container.querySelector('.scoreboard-updated');
+            
+            document.getElementById('toggle-view-btn').onclick = () => {
+                renderSportsScoreboard(container, viewMode === 'scores' ? 'standings' : 'scores');
+            };
+            document.getElementById('refresh-scores-btn').onclick = () => {
+                renderSportsScoreboard(container, viewMode);
+            };
 
-        try {
-            const results = await Promise.allSettled(
-                leagues.map(async (lg) => {
-                    const url = viewMode === 'scores' 
-                        ? `https://site.api.espn.com/apis/site/v2/sports/${lg.sport}/${lg.league}/scoreboard`
-                        : `https://site.api.espn.com/apis/v2/sports/${lg.sport}/${lg.league}/standings`;
-                    const res = await fetch(url);
-                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                    const data = await res.json();
-                    return { name: lg.name, data, viewMode };
-                })
-            );
+            try {
+                const results = await Promise.allSettled(
+                    leagues.map(async (lg) => {
+                        const url = viewMode === 'scores' 
+                            ? `https://site.api.espn.com/apis/site/v2/sports/${lg.sport}/${lg.league}/scoreboard`
+                            : `https://site.api.espn.com/apis/v2/sports/${lg.sport}/${lg.league}/standings`;
+                        const res = await fetch(url);
+                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                        const data = await res.json();
+                        return { name: lg.name, data, viewMode };
+                    })
+                );
 
-            let html = '';
+                let html = '';
 
-            results.forEach((result) => {
-                if (result.status !== 'fulfilled') return;
-                const { name, data, viewMode } = result.value;
+                results.forEach((result) => {
+                    if (result.status !== 'fulfilled') return;
+                    const { name, data, viewMode } = result.value;
 
-                html += `<section class="scoreboard-league">`;
-                html += `<h2 class="scoreboard-league-title">${name}</h2>`;
+                    html += `<section class="scoreboard-league">`;
+                    html += `<h2 class="scoreboard-league-title">${name}</h2>`;
 
-                if (viewMode === 'scores') {
-                    const events = data.events || [];
-                    if (!events.length) {
-                        html += `<p class="scoreboard-empty">No games scheduled today.</p></section>`;
-                        return;
-                    }
-                    html += `<div class="scoreboard-grid">`;
-                    events.forEach((ev) => {
-                        const comp = ev.competitions?.at(0);
-                        if (!comp) return;
-                        const away = comp.competitors.find(c => c.homeAway === 'away');
-                        const home = comp.competitors.find(c => c.homeAway === 'home');
-                        if (!away || !home) return;
+                    if (viewMode === 'scores') {
+                        const events = data.events || [];
+                        if (!events.length) {
+                            html += `<p class="scoreboard-empty">No games scheduled today.</p></section>`;
+                            return;
+                        }
+                        html += `<div class="scoreboard-grid">`;
+                        events.forEach((ev) => {
+                            const comp = ev.competitions?.at(0);
+                            if (!comp) return;
+                            const away = comp.competitors.find(c => c.homeAway === 'away');
+                            const home = comp.competitors.find(c => c.homeAway === 'home');
+                            if (!away || !home) return;
 
-                        const statusText = comp.status?.type?.shortDetail || '';
-                        html += `
-                            <div class="sb-card">
-                                <div class="sb-card-header"><span>${statusText}</span></div>
-                                <div class="sb-team-row"><span>${away.team.shortDisplayName}</span><span>${away.score ?? '-'}</span></div>
-                                <div class="sb-team-row"><span>${home.team.shortDisplayName}</span><span>${home.score ?? '-'}</span></div>
-                            </div>
-                        `;
-                    });
-                    html += `</div>`;
-                } else {
-                    // Standings View Parsing
-                    const standingsGroups = data.standings || data.children || [];
-                    if (!standingsGroups.length) {
-                        html += `<p class="scoreboard-empty">Standings unavailable.</p></section>`;
-                        return;
-                    }
-
-                    html += `<div class="scoreboard-grid" style="grid-template-columns: 1fr;">`;
-                    standingsGroups.forEach((group) => {
-                        html += `<div style="margin-bottom: 10px; font-weight: 600; color: var(--accent-primary);">${group.name || 'Standings'}</div>`;
-                        html += `<table style="width: 100%; font-size: 0.9em; margin-bottom: 12px; border-collapse: collapse;">`;
-                        html += `<tr style="border-bottom: 1px solid var(--border-color); text-align: left; color: var(--text-muted);"><th>Team</th><th style="text-align: right;">W-L</th></tr>`;
-                        
-                        const entries = group.standings?.entries || group.entries || [];
-                        entries.forEach((entry) => {
-                            const teamName = entry.team?.displayName || '';
-                            const stats = entry.stats || [];
-                            const getStat = (name) => stats.find(s => s.name === name)?.displayValue || '';
-                            const record = getStat('overall') || `${getStat('wins')}-${getStat('losses')}`;
-
-                            html += `<tr style="border-bottom: 1px solid var(--border-color);">
-                                <td style="padding: 4px 0;">${teamName}</td>
-                                <td style="text-align: right; font-variant-numeric: tabular-nums;">${record}</td>
-                            </tr>`;
+                            const statusText = comp.status?.type?.shortDetail || '';
+                            html += `
+                                <div class="sb-card">
+                                    <div class="sb-card-header"><span>${statusText}</span></div>
+                                    <div class="sb-team-row"><span>${away.team.shortDisplayName}</span><span>${away.score ?? '-'}</span></div>
+                                    <div class="sb-team-row"><span>${home.team.shortDisplayName}</span><span>${home.score ?? '-'}</span></div>
+                                </div>
+                            `;
                         });
-                        html += `</table>`;
-                    });
-                    html += `</div>`;
+                        html += `</div>`;
+                    } else {
+                        // Standings View: Group by children/conferences/divisions into individual panels
+                        const standingsGroups = data.standings || data.children || [];
+                        if (!standingsGroups.length) {
+                            html += `<p class="scoreboard-empty">Standings unavailable.</p></section>`;
+                            return;
+                        }
+
+                        html += `<div class="scoreboard-grid">`;
+
+                        // Helper to recursively flatten or extract division groupings
+                        const processGroup = (groupNode, parentName = '') => {
+                            const groupName = parentName ? `${parentName} - ${groupNode.name}` : (groupNode.name || 'Standings');
+                            const subGroups = groupNode.children || [];
+                            const entries = groupNode.standings?.entries || groupNode.entries || [];
+
+                            if (entries.length > 0) {
+                                html += `
+                                    <div class="sb-card" style="padding: 14px;">
+                                        <div style="font-size: 0.95em; font-weight: 700; color: var(--accent-title); margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border-color);">${groupName}</div>
+                                        <div style="display: flex; flex-direction: column; gap: 6px;">
+                                `;
+
+                                entries.forEach((entry) => {
+                                    const teamName = entry.team?.displayName || entry.team?.shortDisplayName || '';
+                                    const logo = entry.team?.logo || '';
+                                    const stats = entry.stats || [];
+                                    const getStat = (stName) => stats.find(s => s.name === stName)?.displayValue || '';
+                                    const record = getStat('overall') || `${getStat('wins')}-${getStat('losses')}`;
+
+                                    html += `
+                                        <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9em; padding: 3px 0; color: var(--text-secondary);">
+                                            <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                                                ${logo ? `<img src="${logo}" alt="" style="width: 18px; height: 18px; object-fit: contain; flex-shrink: 0;">` : ''}
+                                                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary);">${teamName}</span>
+                                            </div>
+                                            <span style="font-variant-numeric: tabular-nums; font-weight: 600; margin-left: 12px; flex-shrink: 0;">${record}</span>
+                                        </div>
+                                    `;
+                                });
+
+                                html += `</div></div>`;
+                            }
+
+                            subGroups.forEach(sub => processGroup(sub, groupNode.name && !parentName ? groupNode.name : parentName));
+                        };
+
+                        standingsGroups.forEach(group => processGroup(group));
+                        html += `</div>`;
+                    }
+
+                    html += `</section>`;
+                });
+
+                sectionsEl.innerHTML = html;
+                if (updatedEl) {
+                    updatedEl.textContent = `Updated at ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
                 }
-
-                html += `</section>`;
-            });
-
-            sectionsEl.innerHTML = html;
-            if (updatedEl) {
-                updatedEl.textContent = `Updated at ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+                scrollToTop();
+            } catch (err) {
+                console.error('Failed to load sports data:', err);
+                sectionsEl.innerHTML = `<p class="scoreboard-empty">Unable to load sports data right now.</p>`;
             }
-            scrollToTop();
-        } catch (err) {
-            console.error('Failed to load sports data:', err);
-            sectionsEl.innerHTML = `<p class="scoreboard-empty">Unable to load sports data right now.</p>`;
         }
-    }
-
+        
         //#####
 
         function scrollToTop() {
