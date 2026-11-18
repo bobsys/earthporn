@@ -312,7 +312,12 @@
         }
 
         async function prefetchFeed(url) {
-            // Don't try to prefetch local HTML files as RSS feeds
+            // Skip pseudo-protocols like scoreboard://
+            if (!url || url.startsWith('scoreboard://') || url.endsWith('.html')) {
+                prefetchedFeeds.add(url);
+                return;
+            }
+            //Don't try to prefetch local HTML files as RSS feeds
             if (url.endsWith('.html')) {
                 prefetchedFeeds.add(url);
                 return;
@@ -474,10 +479,10 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
             try {
                 const results = await Promise.allSettled(
                     leagues.map(async (lg) => {
-                        // Added level=3 to force ESPN to expose deep division/group nodes
+                        // Corrected endpoint paths: use site/v2 for scores, v2 (no site) for standings
                         const url = viewMode === 'scores' 
                             ? `https://site.api.espn.com/apis/site/v2/sports/${lg.sport}/${lg.league}/scoreboard`
-                            : `https://site.api.espn.com/apis/site/v2/sports/${lg.sport}/${lg.league}/standings?level=3`;
+                            : `https://site.api.espn.com/apis/v2/sports/${lg.sport}/${lg.league}/standings`;
                         const res = await fetch(url);
                         if (!res.ok) throw new Error(`HTTP ${res.status}`);
                         const data = await res.json();
@@ -519,7 +524,7 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
                         });
                         html += `</div>`;
                     } else {
-                        // Standings View: Deep hierarchical parsing
+                        // Standings View: Recursive breakdown into conferences and divisions
                         const standingsGroups = data.standings || data.children || [];
                         if (!standingsGroups.length) {
                             html += `<p class="scoreboard-empty">Standings unavailable.</p></section>`;
@@ -533,7 +538,6 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
                             const subGroups = node.children || [];
                             const currentTitle = parentTitle ? `${parentTitle} - ${node.name}` : (node.name || '');
 
-                            // If this node has direct team entries, render a card panel for it
                             if (entries.length > 0) {
                                 html += `
                                     <div class="sb-card" style="padding: 14px;">
@@ -562,7 +566,6 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
                                 html += `</div></div>`;
                             }
 
-                            // Recursively check children sub-groups (divisions)
                             subGroups.forEach(sub => {
                                 renderDivisionCard(sub, currentTitle);
                             });
@@ -585,7 +588,7 @@ async function renderSportsScoreboard(container, viewMode = 'scores') {
                 sectionsEl.innerHTML = `<p class="scoreboard-empty">Unable to load sports data right now.</p>`;
             }
         }
-        
+
         //#####
 
         function scrollToTop() {
