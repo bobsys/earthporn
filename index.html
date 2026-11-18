@@ -1261,29 +1261,48 @@ function handleSidebarClick(e, link) {
             const feedUrl = link.getAttribute('data-feed');
             const hrefUrl = link.getAttribute('href');
             const feedTitle = link.getAttribute('data-title');
-            const managementUrl = feedUrl || (hrefUrl !== '#' ? hrefUrl : null);
+            const managementUrl = feedUrl || (hrefUrl && hrefUrl !== '#' ? hrefUrl : null);
 
             if (!managementUrl) return;
 
-            // Determine if this link opens an in-panel view (Sports Scores or local .html tools like Old Weather)
-            const isInPanelMode = feedUrl === 'scoreboard://all' || managementUrl.endsWith('.html');
-
-            if (isInPanelMode) {
-                // Keep active outline/state for right-panel modes
-                document.querySelectorAll('.sidebar a').forEach(l => l.classList.remove('active'));
-                link.classList.add('active');
-            } else {
-                // For standard feeds, temporarily highlight or clear outline after launch as requested
-                document.querySelectorAll('.sidebar a').forEach(l => l.classList.remove('active'));
-                link.classList.add('active');
-                // Optional: if you want regular feeds to clear their active highlight shortly after loading:
-                setTimeout(() => {
-                    if (!link.getAttribute('data-feed')?.endsWith('.html') && link.getAttribute('data-feed') !== 'scoreboard://all') {
-                        // Keeps current topic tracking clean
-                    }
-                }, 300);
+            // External links (no data-feed) never load into the right panel:
+            // keep the current right-panel item's .active highlight intact,
+            // blur the clicked link immediately, and populate the URL bar so
+            // Private View edit/delete toolbar buttons can target it.
+            if (!feedUrl) {
+                rssInput.value = managementUrl;
+                updateFavoriteIconsState(managementUrl);
+                link.blur();
+                return;
             }
 
+            document.querySelectorAll('.sidebar a').forEach(l => l.classList.remove('active'));
+            link.classList.add('active');
+            rssInput.value = managementUrl;
+            updateFavoriteIconsState(managementUrl);
+
+            e.preventDefault();
+            if (link.classList.contains('disabled')) {
+                errorContainer.innerHTML = `This feed is still loading. Please wait or <button onclick="fetchFeed('${feedUrl}', '${feedTitle}', null)">try now</button>.`;
+                errorContainer.style.display = 'block';
+                return;
+            }
+            fetchFeed(feedUrl, feedTitle, link);
+
+            if (window.innerWidth <= 600) {
+                const sidebar = document.querySelector('.sidebar');
+                const sidebarOverlay = document.querySelector('.sidebar-overlay');
+                const headerControls = document.querySelector('.header-controls');
+                sidebar.classList.add('sidebar-hidden');
+                sidebarOverlay.classList.remove('active');
+                headerControls.appendChild(toggleModeButton);
+                headerControls.appendChild(refreshFeedsButton);
+                headerControls.appendChild(toggleSidebarButton);
+                toggleSidebarButton.title = 'Show Sidebar';
+                toggleSidebarButton.setAttribute('aria-label', 'Show sidebar');
+                localStorage.setItem('sidebarState', 'hidden');
+            }
+        }
             rssInput.value = managementUrl;
             updateFavoriteIconsState(managementUrl);
 
@@ -1314,7 +1333,7 @@ function handleSidebarClick(e, link) {
                 localStorage.setItem('sidebarState', 'hidden');
             }
         }
-        
+
         function updateFavoriteIconsState(currentUrl) {
             const heartButton = document.getElementById('add-to-favorites');
             const deleteButton = document.getElementById('delete-from-favorites');
@@ -1497,6 +1516,7 @@ function handleSidebarClick(e, link) {
             const editDefaultReaderCheckbox = document.getElementById('edit-default-reader-checkbox');
 
             let originalUrlToEdit = null;
+            let linkToEdit = null;
 
             editNewTabCheckbox?.addEventListener('change', () => {
                 if (editNewTabCheckbox.checked) {
@@ -1510,7 +1530,7 @@ function handleSidebarClick(e, link) {
                 const cleanInputUrl = rssInput.value.trim().replace(/#scrape$/, '');
                 if (!cleanInputUrl) return;
 
-                let linkToEdit = null;
+                linkToEdit = null;
                 let sectionOfLink = null;
 
                 for (const section of loadedConfig) {
@@ -1572,6 +1592,7 @@ function handleSidebarClick(e, link) {
             editModalCancel.addEventListener('click', () => {
                 editModal.style.display = 'none';
                 originalUrlToEdit = null;
+                linkToEdit = null;
             });
 
             editModalSave.addEventListener('click', async () => {
@@ -1600,8 +1621,9 @@ function handleSidebarClick(e, link) {
                     });
                 });
 
+                const wasHrefLink = !!(linkToEdit && linkToEdit.href && !linkToEdit.feed);
                 const isLocalPage = newUrl.endsWith('.html');
-                const newLinkObject = isLocalPage
+                const newLinkObject = (isLocalPage || wasHrefLink)
                     ? { href: newUrl, title: newTitle, ...(openArticlesInNewTab ? { target: '_blank' } : {}) }
                     : { feed: newUrl, title: newTitle, openArticlesInNewTab, defaultReaderMode };
 
@@ -1636,6 +1658,7 @@ function handleSidebarClick(e, link) {
 
                 editModal.style.display = 'none';
                 originalUrlToEdit = null;
+                linkToEdit = null;
                 buildSidebar(loadedConfig, newUrl);
                 rssInput.value = newUrl;
                 updateFavoriteIconsState(newUrl);
