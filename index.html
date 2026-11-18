@@ -512,12 +512,49 @@
                             const home = comp.competitors.find(c => c.homeAway === 'home');
                             if (!away || !home) return;
 
-                            const statusText = comp.status?.type?.shortDetail || '';
+                            const statusType = comp.status?.type || ev.status?.type || {};
+                            const state = statusType.state;
+                            const statusText = statusType.shortDetail || statusType.detail || '';
+                            const broadcast = comp.broadcast || comp.broadcasts?.at(0)?.names?.at(0) || '';
+                            
+                            const gameLink = ev.links?.find(l => l.rel?.includes('summary'))?.href || '';
+                            const hasLink = gameLink && gameLink !== '#';
+
+                            const favoriteAbbrs = new Set(['NYG', 'NYK', 'NYR', 'NYY']);
+                            const isFavGame = favoriteAbbrs.has(away.team?.abbreviation) || favoriteAbbrs.has(home.team?.abbreviation);
+
+                            const renderTeamRow = (teamObj) => {
+                                const abbr = teamObj.team?.abbreviation || '';
+                                const teamName = teamObj.team?.shortDisplayName || teamObj.team?.displayName || abbr;
+                                const logo = teamObj.team?.logo || '';
+                                const record = teamObj.records?.at(0)?.summary || '';
+                                const score = state === 'pre' ? '-' : (teamObj.score ?? '0');
+                                const isWinner = state === 'post' && teamObj.winner;
+
+                                return `
+                                    <div class="sb-team-row ${isWinner ? 'sb-winner' : ''}">
+                                        <div class="sb-team-info">
+                                            ${logo ? `<img src="${logo}" alt="${abbr}" class="sb-team-logo" loading="lazy">` : ''}
+                                            <span class="sb-team-name">${teamName}</span>
+                                            ${record ? `<span class="sb-team-record">(${record})</span>` : ''}
+                                        </div>
+                                        <span class="sb-team-score">${score}</span>
+                                    </div>
+                                `;
+                            };
+
+                            const cardStyle = hasLink 
+                                ? 'cursor: pointer; transition: background-color 0.2s ease, border-color 0.2s ease;' 
+                                : 'opacity: 0.85; cursor: default;';
+
                             html += `
-                                <div class="sb-card">
-                                    <div class="sb-card-header"><span>${statusText}</span></div>
-                                    <div class="sb-team-row"><span>${away.team.shortDisplayName}</span><span>${away.score ?? '-'}</span></div>
-                                    <div class="sb-team-row"><span>${home.team.shortDisplayName}</span><span>${home.score ?? '-'}</span></div>
+                                <div class="sb-card ${state === 'in' ? 'sb-live' : ''} ${isFavGame ? 'sb-favorite' : ''}" style="${cardStyle}" ${hasLink ? `data-gamelink="${gameLink}"` : ''}>
+                                    <div class="sb-card-header">
+                                        <span class="sb-status ${state === 'in' ? 'sb-status-live' : ''}">${state === 'in' ? '● ' : ''}${statusText}</span>
+                                        ${broadcast ? `<span class="sb-broadcast">${broadcast}</span>` : ''}
+                                    </div>
+                                    ${renderTeamRow(away)}
+                                    ${renderTeamRow(home)}
                                 </div>
                             `;
                         });
@@ -546,7 +583,6 @@
                                 const subGroups = node.children || [];
 
                                 if (entries.length > 0) {
-                                    // Sort entries by winning percentage (descending), falling back to wins
                                     const sortedEntries = [...entries].sort((a, b) => {
                                         const getStatVal = (statsList, statName) => {
                                             const s = statsList.find(st => st.name === statName);
@@ -608,6 +644,16 @@
                 });
 
                 sectionsEl.innerHTML = html;
+
+                sectionsEl.querySelectorAll('.sb-card[data-gamelink]').forEach(card => {
+                    card.addEventListener('click', () => {
+                        const url = card.getAttribute('data-gamelink');
+                        if (url) {
+                            window.open(url, '_blank', 'noopener');
+                        }
+                    });
+                });
+
                 if (updatedEl) {
                     updatedEl.textContent = `Updated at ${new Date().toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
                 }
