@@ -1,4 +1,4 @@
-@import url('https://googleapis.com');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Play:wght@700&display=swap');
 
 :root {
     --bg-body: #141518;
@@ -212,7 +212,7 @@ body {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    outline: none; /* Prevents ugly default browser bounding boxes */
+    outline: none;
 }
 
 .sidebar a:hover {
@@ -225,6 +225,7 @@ body {
     color: var(--text-primary);
     border-left-color: var(--accent-primary);
 }
+
 .sidebar a.disabled {
     color: var(--text-muted);
     opacity: 0.55;
@@ -236,7 +237,7 @@ body {
 #article-header-bar {
     position: sticky;
     top: 0;
-    z-index: 30;
+    z-index: 45;
     display: flex;
     justify-content: space-between;
     align-items: center;
@@ -321,10 +322,12 @@ body {
     transform: scale(1.08);
 }
 
+/* --- MAIN CONTENT & PINNED TOP CONTROLS --- */
 .main-content {
-    flex: 1 1 0;
+    flex: 1 1 auto;
+    align-self: stretch;
+    width: 100%;
     min-width: 0;
-    width: auto;
     overflow-x: hidden;
     overflow-y: auto;
     position: relative;
@@ -335,13 +338,14 @@ body {
     top: 0;
     z-index: 40;
     width: 100%;
-    min-width: 100%;
+    max-width: 100%;
     background-color: var(--bg-sidebar);
     padding: 4px 8px 10px;
     margin-bottom: 12px;
     border-bottom: 1px solid var(--border-color);
     box-shadow: var(--shadow-sm);
 }
+
 .header-controls {
     display: flex;
     justify-content: flex-end;
@@ -375,14 +379,14 @@ h1#feed-title {
     width: 100%;
 }
 
-.input-group button {
-    flex-shrink: 0;
-    white-space: nowrap;
-}
-
 .input-group input[type="text"] {
     flex: 1 1 auto;
     min-width: 160px;
+}
+
+.input-group button {
+    flex-shrink: 0;
+    white-space: nowrap;
 }
 
 input[type="text"],
@@ -402,7 +406,6 @@ input[type="text"]:focus {
     border-color: var(--accent-primary);
     box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.2);
 }
-
 
 button {
     padding: 11px 20px;
@@ -444,12 +447,16 @@ button:disabled {
     display: flex;
     flex-direction: column;
     gap: 14px;
+    width: 100%;
+    max-width: 100%;
 }
 
 .feed-item {
     display: flex;
     gap: 16px;
     align-items: flex-start;
+    width: 100%;
+    max-width: 100%;
     background: var(--bg-card);
     padding: 16px;
     border-radius: 10px;
@@ -553,6 +560,8 @@ button:disabled {
     display: none;
     font-size: 0.92em;
     font-weight: 500;
+    width: 100%;
+    max-width: 100%;
 }
 
 #error.notification {
@@ -612,7 +621,53 @@ footer {
 }
 
 /* --- RESPONSIVE MOBILE --- */
-/* Keep the desktop shell locked to the viewport so columns scroll separately */
+@media (max-width: 700px) {
+    body {
+        padding: 8px;
+    }
+
+    .container {
+        flex-direction: column;
+        padding: 10px;
+        gap: 10px;
+    }
+
+    .sidebar {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        max-width: 320px;
+        height: 100%;
+        border-radius: 0;
+        transform: translateX(-100%);
+        overflow-y: auto;
+    }
+
+    .sidebar:not(.sidebar-hidden) {
+        transform: translateX(0);
+    }
+
+    .sidebar:not(.sidebar-hidden) + .sidebar-overlay {
+        display: block;
+    }
+
+    .input-group {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .feed-item {
+        flex-direction: column;
+    }
+
+    .feed-item img {
+        width: 100%;
+        height: 190px;
+    }
+}
+
+/* --- DESKTOP INDEPENDENT SCROLLING & HIDDEN SCROLLBARS --- */
 @media (min-width: 701px) {
     .container {
         height: calc(100dvh - 24px);
@@ -625,12 +680,12 @@ footer {
         height: 100%;
         overflow-y: auto;
         overscroll-behavior: contain;
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none; /* Legacy Edge */
+        scrollbar-width: none;
+        -ms-overflow-style: none;
     }
 
     .sidebar::-webkit-scrollbar {
-        display: none; /* Chrome, Edge, Safari, Opera */
+        display: none;
     }
 
     .sidebar ul {
@@ -640,14 +695,15 @@ footer {
 
     .main-content {
         height: 100%;
+        overflow-x: hidden;
         overflow-y: auto;
         overscroll-behavior: contain;
-        scrollbar-width: none; /* Firefox */
-        -ms-overflow-style: none; /* Legacy Edge */
+        scrollbar-width: none;
+        -ms-overflow-style: none;
     }
 
     .main-content::-webkit-scrollbar {
-        display: none; /* Chrome, Edge, Safari, Opera */
+        display: none;
     }
 }
 
@@ -698,6 +754,7 @@ footer {
     .reader-article {
         padding: 18px 16px;
     }
+
     .reader-article h1 {
         font-size: 1.4em;
     }
@@ -727,6 +784,7 @@ footer {
     opacity: 1;
     transform: translateY(0);
 }
+
 /* --- SPORTS SCOREBOARD --- */
 .scoreboard-toolbar {
     display: flex;
@@ -866,16 +924,4 @@ footer {
     font-size: 1.05em;
     font-variant-numeric: tabular-nums;
     margin-left: 8px;
-}
-
-.main-content {
-    overflow-x: hidden;
-}
-
-.panel-top-controls,
-#error,
-#feed,
-.feed-item {
-    max-width: 100%;
-    width: 100%;
 }
