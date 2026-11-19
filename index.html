@@ -41,7 +41,7 @@
                             <button class="toggle-sidebar" title="Hide Sidebar" aria-label="Hide sidebar">☰</button>
                         </div>
                     </div>
-                    <h1 id="feed-title">Bobs Stuff</h1>
+                   <h1 id="feed-title">Bobs Stuff</h1>
                 </div>
                 <div class="input-group">
                     <input type="text" id="rssUrl" placeholder="Enter RSS feed URL (e.g., https://example.com/feed.xml)">
@@ -1022,21 +1022,13 @@
         // Load sidebar state
         const savedSidebarState = localStorage.getItem('sidebarState');
         const isMobile = window.innerWidth <= 600;
-        if (isMobile || savedSidebarState === 'hidden') {
+        const startHidden = isMobile || savedSidebarState === 'hidden';
+
+        if (startHidden) {
             sidebar.classList.add('sidebar-hidden');
-            headerControls.appendChild(toggleModeButton);
-            headerControls.appendChild(refreshFeedsButton);
-            headerControls.appendChild(toggleSidebarButton);
-            toggleSidebarButton.title = 'Show Sidebar';
-            toggleSidebarButton.setAttribute('aria-label', 'Show sidebar');
             localStorage.setItem('sidebarState', 'hidden');
-        } else {
-            sidebarHeader.appendChild(toggleModeButton);
-            sidebarHeader.appendChild(refreshFeedsButton);
-            sidebarHeader.appendChild(toggleSidebarButton);
-            toggleSidebarButton.title = 'Hide Sidebar';
-            toggleSidebarButton.setAttribute('aria-label', 'Hide sidebar');
         }
+        syncHeaderButtons(startHidden);
 
         // Event delegation for button clicks
         function handleInteraction(e) {
@@ -1055,21 +1047,20 @@
                 sidebar.classList.toggle('sidebar-hidden');
                 sidebarOverlay.classList.toggle('active');
                 const isHidden = sidebar.classList.contains('sidebar-hidden');
-                if (isHidden) {
-                    headerControls.appendChild(toggleModeButton);
-                    headerControls.appendChild(refreshFeedsButton);
-                    headerControls.appendChild(toggleSidebarButton);
-                    toggleSidebarButton.title = 'Show Sidebar';
-                    toggleSidebarButton.setAttribute('aria-label', 'Show sidebar');
-                } else {
-                    sidebarHeader.appendChild(toggleModeButton);
-                    sidebarHeader.appendChild(refreshFeedsButton);
-                    sidebarHeader.appendChild(toggleSidebarButton);
-                    toggleSidebarButton.title = 'Hide Sidebar';
-                    toggleSidebarButton.setAttribute('aria-label', 'Hide sidebar');
-                }
+                syncHeaderButtons(isHidden);
                 localStorage.setItem('sidebarState', isHidden ? 'hidden' : 'visible');
             }
+        }
+
+        // Helper to keep the three buttons grouped with the title
+        function syncHeaderButtons(isHidden) {
+            const buttonContainer = typeof headerButtons !== 'undefined' && headerButtons ? headerButtons : sidebarHeader;
+            buttonContainer.appendChild(toggleModeButton);
+            buttonContainer.appendChild(refreshFeedsButton);
+            buttonContainer.appendChild(toggleSidebarButton);
+
+            toggleSidebarButton.title = isHidden ? 'Show Sidebar' : 'Hide Sidebar';
+            toggleSidebarButton.setAttribute('aria-label', isHidden ? 'Show sidebar' : 'Hide sidebar');
         }
 
         container.addEventListener('click', handleInteraction);
