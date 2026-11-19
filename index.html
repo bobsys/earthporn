@@ -24,6 +24,9 @@
             <img src="illusionUP1.png" alt="Illusion Image" class="sidebar-image" style="display: none;">
             <!-- Sidebar content will be dynamically inserted here -->
             <div id="sidebar-content"></div>
+            <footer>
+                Coded by Bob Dolan and Google Gemini - Version <span id="version-date"></span>
+            </footer>
         </div>
         <div class="main-content">
             <div id="article-header-bar" style="display: none;">
@@ -52,7 +55,7 @@
             <div id="feed"></div>
         </div>
     </div>
-    
+
     <!-- Modal for adding a new feed -->
     <div id="add-feed-modal" class="modal-overlay">
         <div class="modal">
@@ -117,9 +120,6 @@
         </div>
     </div>
 
-    <footer>
-        Coded by Bob Dolan and Google Gemini - Version <span id="version-date"></span>
-    </footer>
 
     <script type="module">
     import { stripHTML, sanitizeDescription, getCache, setCache, clearCache, downloadJson, shuffleArray, showMessage, debounce } from './utils.js';
