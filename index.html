@@ -21,13 +21,6 @@
             </footer>
         </div>
         <div class="main-content">
-            <div id="article-header-bar" style="display: none;">
-                <button id="back-to-feed-btn" type="button">← Back to Feed</button>
-                <div class="article-header-actions">
-                    <button id="reader-view-btn" type="button">📖 Reader View</button>
-                    <a id="open-original-link" href="#" target="_blank" rel="noopener">Open Original Page ↗</a>
-                </div>
-            </div>
             <div class="panel-top-controls">
                 <div class="header-controls">
                     <!-- Toggle buttons will be appended here dynamically if needed -->
@@ -51,6 +44,13 @@
                     <button id="delete-from-favorites" title="Delete from Favorites" disabled>🗑️</button>
                     <button id="export-favorites-btn" title="Export JSON for Git Backup" style="display: none;">💾</button>
                     <button id="sync-server-btn" title="Reset Local Changes & Reload from Server" style="display: none;">🔄</button>
+                </div>
+            </div>
+            <div id="article-header-bar" style="display: none;">
+                <button id="back-to-feed-btn" type="button">← Back to Feed</button>
+                <div class="article-header-actions">
+                    <button id="reader-view-btn" type="button">📖 Reader View</button>
+                    <a id="open-original-link" href="#" target="_blank" rel="noopener">Open Original Page ↗</a>
                 </div>
             </div>
             <div id="error"></div>
