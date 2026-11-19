@@ -238,19 +238,10 @@ body {
 /* --- STICKY RIGHT-PANEL ARTICLE HEADER --- */
 #article-header-bar {
     position: sticky;
-    top: 0;
+    top: var(--top-bar-height, 64px);
     z-index: 45;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    flex-wrap: wrap;
-    gap: 10px;
-    padding: 10px 14px;
-    margin-bottom: 14px;
-    background: var(--bg-card);
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-    box-shadow: var(--shadow-sm);
+    background-color: var(--bg-sidebar);
+    border-bottom: 1px solid var(--border-color);
 }
 
 .article-header-actions {
