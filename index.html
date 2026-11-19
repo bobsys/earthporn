@@ -33,23 +33,24 @@
                     <a id="open-original-link" href="#" target="_blank" rel="noopener">Open Original Page ↗</a>
                 </div>
             </div>
-            <div class="header-controls">
-                <!-- Toggle buttons will be appended here dynamically if needed -->
-            </div>
-            <h1 id="feed-title">Bobs Stuff</h1>
-            <div class="input-group">
-                <input type="text" id="rssUrl" placeholder="Enter RSS feed URL (e.g., https://example.com/feed.xml)">
-                <button id="load-feed-btn" type="button">Load Feed</button>
-                <button id="add-to-favorites" title="Add to Favorites" disabled>❤️</button>
-                <button id="edit-from-favorites" title="Edit Favorite" disabled>✏️</button>
-                <button id="delete-from-favorites" title="Delete from Favorites" disabled>🗑️</button>
-                <button id="export-favorites-btn" title="Export JSON for Git Backup" style="display: none;">💾</button>
-                <button id="sync-server-btn" title="Reset Local Changes & Reload from Server" style="display: none;">🔄</button>
+            <div class="panel-top-controls">
+                <div class="header-controls">
+                    <!-- Toggle buttons will be appended here dynamically if needed -->
+                </div>
+                <h1 id="feed-title">Bobs Stuff</h1>
+                <div class="input-group">
+                    <input type="text" id="rssUrl" placeholder="Enter RSS feed URL (e.g., https://example.com/feed.xml)">
+                    <button id="load-feed-btn" type="button">Load Feed</button>
+                    <button id="add-to-favorites" title="Add to Favorites" disabled>❤️</button>
+                    <button id="edit-from-favorites" title="Edit Favorite" disabled>✏️</button>
+                    <button id="delete-from-favorites" title="Delete from Favorites" disabled>🗑️</button>
+                    <button id="export-favorites-btn" title="Export JSON for Git Backup" style="display: none;">💾</button>
+                    <button id="sync-server-btn" title="Reset Local Changes & Reload from Server" style="display: none;">🔄</button>
+                </div>
             </div>
             <div id="error"></div>
             <div id="feed"></div>
         </div>
-    </div>
 
     <!-- Modal for adding a new feed -->
     <div id="add-feed-modal" class="modal-overlay">
@@ -124,7 +125,7 @@
 
     (function() {
         // --- APPLICATION VERSION ---
-        const APP_VERSION = "11182026";
+        const APP_VERSION = "11192026";
 
         // --- STATE MANAGEMENT ---
         let prefetchedFeeds = new Set();

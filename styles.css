@@ -329,16 +329,22 @@ body {
     position: relative;
 }
 
-.header-controls {
+.panel-top-controls {
     position: sticky;
     top: 0;
-    z-index: 30;
+    z-index: 40;
+    background-color: var(--bg-sidebar);
+    padding: 4px 8px 10px;
+    margin-bottom: 12px;
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: var(--shadow-sm);
+}
+
+.header-controls {
     display: flex;
     justify-content: flex-end;
     gap: 6px;
-    padding: 6px 8px;
-    margin: 0;
-    background-color: var(--bg-sidebar);
+    margin-bottom: 4px;
     pointer-events: auto;
 }
 
@@ -347,56 +353,23 @@ body {
 }
 
 h1#feed-title {
-    position: sticky;
-    top: 46px;
-    z-index: 29;
     text-align: center;
     color: var(--accent-title);
     font-size: 1.45em;
     font-weight: 700;
-    margin: 0 auto;
+    margin: 0 auto 10px;
     background-color: var(--bg-header-pill);
-    padding: 10px 24px;
+    padding: 8px 22px;
     border-radius: 999px;
     border: 1px solid var(--border-color);
     width: fit-content;
-    box-shadow: var(--shadow-sm);
-}
-
-/* Cover the left and right sides beside the centered pill title */
-h1#feed-title::before,
-h1#feed-title::after {
-    content: '';
-    position: absolute;
-    top: -6px;
-    bottom: -6px;
-    width: 100vw;
-    background-color: var(--bg-sidebar);
-    z-index: -1;
-    pointer-events: none;
-}
-
-h1#feed-title::before {
-    right: 100%;
-    margin-right: 8px;
-}
-
-h1#feed-title::after {
-    left: 100%;
-    margin-left: 8px;
 }
 
 .input-group {
-    position: sticky;
-    top: 106px;
-    z-index: 28;
     display: flex;
     gap: 8px;
-    padding: 10px 8px 12px;
-    margin: 0 0 14px;
+    margin-bottom: 0;
     align-items: center;
-    background-color: var(--bg-sidebar);
-    border-bottom: 1px solid var(--border-color);
 }
 
 input[type="text"],
