@@ -333,6 +333,7 @@ body {
     position: sticky;
     top: 0;
     z-index: 40;
+    width: 100%;
     background-color: var(--bg-sidebar);
     padding: 4px 8px 10px;
     margin-bottom: 12px;
@@ -370,6 +371,17 @@ h1#feed-title {
     gap: 8px;
     margin-bottom: 0;
     align-items: center;
+    width: 100%;
+}
+
+.input-group button {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.input-group input[type="text"] {
+    flex: 1 1 auto;
+    min-width: 160px;
 }
 
 input[type="text"],
@@ -389,6 +401,7 @@ input[type="text"]:focus {
     border-color: var(--accent-primary);
     box-shadow: 0 0 0 3px rgba(77, 171, 247, 0.2);
 }
+
 
 button {
     padding: 11px 20px;
