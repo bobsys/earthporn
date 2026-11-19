@@ -1257,7 +1257,7 @@
             CRITICAL_FEEDS = allFeeds; // All feeds are now considered critical for prefetching
         }
 
-function handleSidebarClick(e, link) {
+        function handleSidebarClick(e, link) {
             const feedUrl = link.getAttribute('data-feed');
             const hrefUrl = link.getAttribute('href');
             const feedTitle = link.getAttribute('data-title');
@@ -1288,36 +1288,6 @@ function handleSidebarClick(e, link) {
                 return;
             }
             fetchFeed(feedUrl, feedTitle, link);
-
-            if (window.innerWidth <= 600) {
-                const sidebar = document.querySelector('.sidebar');
-                const sidebarOverlay = document.querySelector('.sidebar-overlay');
-                const headerControls = document.querySelector('.header-controls');
-                sidebar.classList.add('sidebar-hidden');
-                sidebarOverlay.classList.remove('active');
-                headerControls.appendChild(toggleModeButton);
-                headerControls.appendChild(refreshFeedsButton);
-                headerControls.appendChild(toggleSidebarButton);
-                toggleSidebarButton.title = 'Show Sidebar';
-                toggleSidebarButton.setAttribute('aria-label', 'Show sidebar');
-                localStorage.setItem('sidebarState', 'hidden');
-            }
-        }
-            rssInput.value = managementUrl;
-            updateFavoriteIconsState(managementUrl);
-
-            if (feedUrl) {
-                e.preventDefault();
-                if (link.classList.contains('disabled')) {
-                    errorContainer.innerHTML = `This feed is still loading. Please wait or <button onclick="fetchFeed('${feedUrl}', '${feedTitle}', null)">try now</button>.`;
-                    errorContainer.style.display = 'block';
-                    return;
-                }
-                fetchFeed(feedUrl, feedTitle, link);
-            }
-
-            // Blur the link element to clear any lingering browser focus ring outline
-            link.blur();
 
             if (window.innerWidth <= 600) {
                 const sidebar = document.querySelector('.sidebar');
