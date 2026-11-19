@@ -70,16 +70,16 @@
         "defaultReaderMode": false
       },
       {
-        "feed": "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en",
-        "title": "Google News",
-        "openArticlesInNewTab": false,
-        "defaultReaderMode": false
-      },
-      {
         "feed": "https://www.zmescience.com/feed/",
         "title": "Science",
         "openArticlesInNewTab": false,
         "defaultReaderMode": false
+      },
+      {
+        "feed": "https://news.google.com/rss?hl=en-US&gl=US&ceid=US:en",
+        "title": "Google News",
+        "openArticlesInNewTab": false,
+        "defaultReaderMode": true
       }
     ]
   },

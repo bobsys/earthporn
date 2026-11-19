@@ -80,6 +80,12 @@
         "title": "Science",
         "openArticlesInNewTab": false,
         "defaultReaderMode": false
+      },
+      {
+        "feed": "https://GroundNews.com",
+        "title": "Ground News",
+        "openArticlesInNewTab": false,
+        "defaultReaderMode": false
       }
     ]
   },
