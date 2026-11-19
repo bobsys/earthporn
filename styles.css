@@ -335,17 +335,22 @@ body {
     position: relative;
 }
 
-.panel-top-controls {
-    position: sticky;
-    top: 0;
-    z-index: 40;
-    width: 100%;
-    max-width: 100%;
-    background-color: var(--bg-sidebar);
-    padding: 4px 8px 10px;
-    margin-bottom: 12px;
-    border-bottom: 1px solid var(--border-color);
-    box-shadow: var(--shadow-sm);
+.panel-top-controls .sidebar-header {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 12px;
+    width: fit-content;
+    margin-bottom: 10px;
+}
+
+.panel-top-controls .sidebar-header h1 {
+    font-family: 'Play', sans-serif;
+    font-size: 1.45em;
+    font-weight: 700;
+    color: var(--brand-color);
+    letter-spacing: 0.5px;
+    line-height: 1.1;
 }
 
 .header-controls {
