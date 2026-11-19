@@ -335,13 +335,23 @@ body {
     position: relative;
 }
 
+.panel-top-controls .top-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    margin-bottom: 10px;
+}
+
 .panel-top-controls .sidebar-header {
-    display: inline-flex;
+    display: flex;
     align-items: center;
     justify-content: flex-start;
-    gap: 12px;
-    width: fit-content;
-    margin-bottom: 10px;
+    gap: 10px;
+    width: auto;
+    flex-shrink: 0;
+    margin-bottom: 0;
 }
 
 .panel-top-controls .sidebar-header h1 {
@@ -351,6 +361,22 @@ body {
     color: var(--brand-color);
     letter-spacing: 0.5px;
     line-height: 1.1;
+    white-space: nowrap;
+}
+
+.panel-top-controls .header-buttons {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.panel-top-controls h1#feed-title {
+    margin: 0 0 0 auto;
+    font-size: 1.35em;
+    text-align: right;
+    width: fit-content;
+    max-width: 100%;
 }
 
 .header-controls {
