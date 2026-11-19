@@ -332,33 +332,48 @@ body {
 .header-controls {
     position: sticky;
     top: 0;
-    z-index: 25;
-    padding-top: 4px;
-    padding-bottom: 4px;
-    margin-bottom: 6px;
-    background: var(--bg-container);
+    z-index: 30;
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    padding: 6px 4px;
+    margin-bottom: 0;
+    background-color: var(--bg-sidebar);
+    pointer-events: auto;
+}
+
+.header-controls button {
     pointer-events: auto;
 }
 
 h1#feed-title {
     position: sticky;
-    top: 38px;
-    z-index: 24;
-    margin: 0 auto 12px;
+    top: 46px;
+    z-index: 29;
+    text-align: center;
+    color: var(--accent-title);
+    font-size: 1.45em;
+    font-weight: 700;
+    margin: 0 auto 0;
+    background-color: var(--bg-header-pill);
+    padding: 10px 24px;
+    border-radius: 999px;
+    border: 1px solid var(--border-color);
+    width: fit-content;
     box-shadow: var(--shadow-sm);
 }
 
 .input-group {
     position: sticky;
-    top: 92px;
-    z-index: 23;
-    padding: 8px 0 10px;
+    top: 104px;
+    z-index: 28;
+    display: flex;
+    gap: 8px;
+    padding: 10px 4px 12px;
     margin-bottom: 14px;
-    background: var(--bg-container);
-}
-
-.header-controls button {
-    pointer-events: auto; /* Keeps sidebar/theme buttons clickable when moved here */
+    align-items: center;
+    background-color: var(--bg-sidebar);
+    border-bottom: 1px solid var(--border-color);
 }
 
 input[type="text"],
@@ -600,6 +615,12 @@ footer {
         height: 100%;
         overflow-y: auto;
         overscroll-behavior: contain;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* Legacy Edge */
+    }
+
+    .sidebar::-webkit-scrollbar {
+        display: none; /* Chrome, Edge, Safari, Opera */
     }
 
     .sidebar ul {
@@ -611,7 +632,12 @@ footer {
         height: 100%;
         overflow-y: auto;
         overscroll-behavior: contain;
-        padding-right: 4px;
+        scrollbar-width: none; /* Firefox */
+        -ms-overflow-style: none; /* Legacy Edge */
+    }
+
+    .main-content::-webkit-scrollbar {
+        display: none; /* Chrome, Edge, Safari, Opera */
     }
 }
 
