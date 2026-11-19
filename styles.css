@@ -866,3 +866,15 @@ footer {
     font-variant-numeric: tabular-nums;
     margin-left: 8px;
 }
+
+.main-content {
+    overflow-x: hidden;
+}
+
+.panel-top-controls,
+#error,
+#feed,
+.feed-item {
+    max-width: 100%;
+    width: 100%;
+}
