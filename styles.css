@@ -875,14 +875,15 @@ footer {
 
 .scoreboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(0, max-content));
     gap: 12px;
+    max-width: 100%;
 }
 
 .sb-card {
     display: block;
     text-decoration: none;
-    min-width: 270px;
+    max-width: 100%;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 10px;
@@ -956,7 +957,7 @@ footer {
 
 .sb-team-name {
     font-size: 0.95em;
-    white-space: normal;
+    white-space: nowrap;
     overflow: visible;
     text-overflow: clip;
 }
