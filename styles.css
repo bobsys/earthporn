@@ -874,8 +874,8 @@ footer {
 }
 
 .scoreboard-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(0, max-content));
+    display: flex;
+    flex-wrap: wrap;
     gap: 12px;
     max-width: 100%;
 }
@@ -883,6 +883,8 @@ footer {
 .sb-card {
     display: block;
     text-decoration: none;
+    width: max-content;
+    min-width: 240px;
     max-width: 100%;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
