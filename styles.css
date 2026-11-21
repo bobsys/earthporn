@@ -875,13 +875,14 @@ footer {
 
 .scoreboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(265px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
     gap: 12px;
 }
 
 .sb-card {
     display: block;
     text-decoration: none;
+    min-width: 340px;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 10px;
@@ -969,18 +970,4 @@ footer {
     font-size: 1.05em;
     font-variant-numeric: tabular-nums;
     margin-left: 8px;
-}
-
-.standings-box,
-.nhl-standings-card {
-    min-width: 320px;
-    max-width: none;
-    flex: 1 1 320px;
-}
-
-.standings-box .team-name,
-.nhl-standings-card .team-name {
-    white-space: nowrap;
-    overflow: visible;
-    text-overflow: clip;
 }
