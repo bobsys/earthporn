@@ -875,14 +875,14 @@ footer {
 
 .scoreboard-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
     gap: 12px;
 }
 
 .sb-card {
     display: block;
     text-decoration: none;
-    min-width: 290px;
+    min-width: 250px;
     background: var(--bg-card);
     border: 1px solid var(--border-color);
     border-radius: 10px;
