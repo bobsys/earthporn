@@ -973,9 +973,9 @@ footer {
 
 .standings-box,
 .nhl-standings-card {
-    min-width: 220px;
+    min-width: 320px;
     max-width: none;
-    flex: 1 1 220px;
+    flex: 1 1 320px;
 }
 
 .standings-box .team-name,
