@@ -970,3 +970,17 @@ footer {
     font-variant-numeric: tabular-nums;
     margin-left: 8px;
 }
+
+.standings-box,
+.nhl-standings-card {
+    min-width: 220px;
+    max-width: none;
+    flex: 1 1 220px;
+}
+
+.standings-box .team-name,
+.nhl-standings-card .team-name {
+    white-space: nowrap;
+    overflow: visible;
+    text-overflow: clip;
+}

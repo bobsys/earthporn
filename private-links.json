@@ -82,6 +82,12 @@
         "defaultReaderMode": false
       },
       {
+        "feed": "https://www.newsweek.com/",
+        "title": "Newsweek",
+        "openArticlesInNewTab": false,
+        "defaultReaderMode": true
+      },
+      {
         "feed": "https://GroundNews.com",
         "title": "Ground News",
         "openArticlesInNewTab": false,
