@@ -956,9 +956,9 @@ footer {
 
 .sb-team-name {
     font-size: 0.95em;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
 }
 
 .sb-team-record {
