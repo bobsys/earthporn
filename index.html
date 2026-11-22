@@ -551,12 +551,12 @@
 
                 results.forEach((result) => {
                     if (result.status !== 'fulfilled') return;
-                    const { name, data, viewMode } = result.value;
+                    const { name, data, mode } = result.value;
 
                     html += `<section class="scoreboard-league">`;
                     html += `<h2 class="scoreboard-league-title">${name}</h2>`;
 
-                    if (viewMode === 'scores') {
+                    if (mode === 'scores') {
                         const events = data.events || [];
                         if (!events.length) {
                             html += `<p class="scoreboard-empty">No games scheduled for ${dateLabelText}.</p></section>`;
