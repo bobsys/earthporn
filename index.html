@@ -450,7 +450,8 @@
         }
 
         //#####
-let scoreboardRenderToken = 0;
+
+        let scoreboardRenderToken = 0;
 
         function getLocalDateStart(dateObj = new Date()) {
             return new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
@@ -481,6 +482,32 @@ let scoreboardRenderToken = 0;
             return formatted;
         }
 
+        function collectStandingsGroups(data) {
+            if (!data || typeof data !== 'object') return [];
+
+            // Case 1: Top-level children (e.g., conferences -> divisions -> standings.entries)
+            if (Array.isArray(data.children) && data.children.length > 0) {
+                return data.children;
+            }
+
+            // Case 2: data.standings is an array of groups
+            if (Array.isArray(data.standings) && data.standings.length > 0) {
+                return data.standings;
+            }
+
+            // Case 3: data.standings is an object with entries directly
+            if (data.standings && Array.isArray(data.standings.entries) && data.standings.entries.length > 0) {
+                return [{ name: data.name || 'League Standings', standings: data.standings }];
+            }
+
+            // Case 4: Top-level entries directly
+            if (Array.isArray(data.entries) && data.entries.length > 0) {
+                return [{ name: data.name || 'League Standings', entries: data.entries }];
+            }
+
+            return [];
+        }
+
         async function renderSportsScoreboard(container, viewMode = 'scores', selectedDate = getLocalDateStart()) {
             const token = ++scoreboardRenderToken;
             const activeDate = getLocalDateStart(selectedDate);
@@ -488,10 +515,10 @@ let scoreboardRenderToken = 0;
             const dateLabelText = formatScoreboardDateLabel(activeDate);
 
             const leagues = [
-                { name: 'NFL', sport: 'football', league: 'nfl' },
-                { name: 'NBA', sport: 'basketball', league: 'nba' },
-                { name: 'MLB', sport: 'baseball', league: 'mlb' },
-                { name: 'NHL', sport: 'hockey', league: 'nhl' }
+                { name: 'NFL', sport: 'football', league: 'nfl', espnUrl: 'https://www.espn.com/nfl/standings' },
+                { name: 'NBA', sport: 'basketball', league: 'nba', espnUrl: 'https://www.espn.com/nba/standings' },
+                { name: 'MLB', sport: 'baseball', league: 'mlb', espnUrl: 'https://www.espn.com/mlb/standings' },
+                { name: 'NHL', sport: 'hockey', league: 'nhl', espnUrl: 'https://www.espn.com/nhl/standings' }
             ];
 
             container.innerHTML = `
@@ -538,9 +565,9 @@ let scoreboardRenderToken = 0;
                             ? `https://site.api.espn.com/apis/site/v2/sports/${lg.sport}/${lg.league}/scoreboard?dates=${dateParam}`
                             : `https://site.api.espn.com/apis/site/v2/sports/${lg.sport}/${lg.league}/standings?level=3`;
                         const res = await fetch(url);
-                        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                        if (!res.ok) throw new Error(`${lg.name} HTTP ${res.status}`);
                         const data = await res.json();
-                        return { name: lg.name, data, mode: viewMode };
+                        return { leagueObj: lg, data, mode: viewMode };
                     })
                 );
 
@@ -549,8 +576,12 @@ let scoreboardRenderToken = 0;
                 let html = '';
 
                 results.forEach((result) => {
-                    if (result.status !== 'fulfilled') return;
-                    const { name, data, mode } = result.value;
+                    if (result.status !== 'fulfilled') {
+                        console.warn('Scoreboard league request rejected:', result.reason);
+                        return;
+                    }
+                    const { leagueObj, data, mode } = result.value;
+                    const { name, espnUrl } = leagueObj;
 
                     html += `<section class="scoreboard-league">`;
                     html += `<h2 class="scoreboard-league-title">${name}</h2>`;
@@ -617,82 +648,91 @@ let scoreboardRenderToken = 0;
                         });
                         html += `</div>`;
                     } else {
-                        const standingsGroups = data.standings || data.children || [];
-                        if (!Array.isArray(standingsGroups) || !standingsGroups.length) {
-                            html += `<p class="scoreboard-empty">Standings unavailable.</p>`;
-                        } else {
-                            html += `<div style="display: flex; flex-direction: column; gap: 16px;">`;
+                        const standingsGroups = collectStandingsGroups(data);
+                        let renderedAnyDivision = false;
+                        let standingsHtml = `<div style="display: flex; flex-direction: column; gap: 16px;">`;
 
-                            standingsGroups.forEach((confNode) => {
-                                const confName = confNode.name || 'Conference';
-                                const confChildren = confNode.children || [];
+                        standingsGroups.forEach((confNode) => {
+                            const confName = confNode.name || 'Conference';
+                            const confChildren = confNode.children || [];
+                            let confDivisionsHtml = '';
 
-                                html += `
+                            const renderDivisions = (node) => {
+                                const entries = node.standings?.entries || node.entries || [];
+                                const subGroups = node.children || [];
+
+                                if (entries.length > 0) {
+                                    renderedAnyDivision = true;
+                                    const sortedEntries = [...entries].sort((a, b) => {
+                                        const getStatVal = (statsList, statName) => {
+                                            const s = (statsList || []).find(st => st.name === statName);
+                                            return s ? parseFloat(s.value) : 0;
+                                        };
+                                        const wpA = getStatVal(a.stats, 'winPercent');
+                                        const wpB = getStatVal(b.stats, 'winPercent');
+                                        if (wpA !== wpB) return wpB - wpA;
+
+                                        const wA = getStatVal(a.stats, 'wins');
+                                        const wB = getStatVal(b.stats, 'wins');
+                                        return wB - wA;
+                                    });
+
+                                    const divName = node.name || 'Standings';
+                                    confDivisionsHtml += `
+                                        <div class="sb-card" style="padding: 14px; margin-bottom: 0; background: var(--bg-body);">
+                                            <div style="font-size: 0.9em; font-weight: 700; color: var(--accent-primary); margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border-color);">${divName}</div>
+                                            <div style="display: flex; flex-direction: column; gap: 6px;">
+                                    `;
+
+                                    sortedEntries.forEach((entry) => {
+                                        const teamName = entry.team?.displayName || entry.team?.shortDisplayName || '';
+                                        const logo = entry.team?.logo || entry.team?.logos?.[0]?.href || '';
+                                        const stats = entry.stats || [];
+                                        const getStat = (stName) => stats.find(s => s.name === stName)?.displayValue || '';
+                                        const record = getStat('overall') || `${getStat('wins')}-${getStat('losses')}`;
+
+                                        confDivisionsHtml += `
+                                            <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9em; padding: 3px 0; color: var(--text-secondary);">
+                                                <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
+                                                    ${logo ? `<img src="${logo}" alt="" style="width: 18px; height: 18px; object-fit: contain; flex-shrink: 0;">` : ''}
+                                                    <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary);">${teamName}</span>
+                                                </div>
+                                                <span style="font-variant-numeric: tabular-nums; font-weight: 600; margin-left: 12px; flex-shrink: 0;">${record}</span>
+                                            </div>
+                                        `;
+                                    });
+
+                                    confDivisionsHtml += `</div></div>`;
+                                }
+
+                                subGroups.forEach(sub => renderDivisions(sub));
+                            };
+
+                            if (confChildren.length > 0) {
+                                confChildren.forEach(child => renderDivisions(child));
+                            } else {
+                                renderDivisions(confNode);
+                            }
+
+                            if (confDivisionsHtml) {
+                                standingsHtml += `
                                     <div style="background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 16px; box-shadow: var(--shadow-sm);">
                                         <div style="font-size: 1.1em; font-weight: 700; color: var(--accent-title); margin-bottom: 14px; padding-bottom: 6px; border-bottom: 2px solid var(--border-color); letter-spacing: 0.04em;">${confName}</div>
                                         <div class="scoreboard-grid" style="margin-bottom: 0;">
+                                            ${confDivisionsHtml}
+                                        </div>
+                                    </div>
                                 `;
+                            }
+                        });
 
-                                const renderDivisions = (node) => {
-                                    const entries = node.standings?.entries || node.entries || [];
-                                    const subGroups = node.children || [];
+                        standingsHtml += `</div>`;
 
-                                    if (entries.length > 0) {
-                                        const sortedEntries = [...entries].sort((a, b) => {
-                                            const getStatVal = (statsList, statName) => {
-                                                const s = (statsList || []).find(st => st.name === statName);
-                                                return s ? parseFloat(s.value) : 0;
-                                            };
-                                            const wpA = getStatVal(a.stats, 'winPercent');
-                                            const wpB = getStatVal(b.stats, 'winPercent');
-                                            if (wpA !== wpB) return wpB - wpA;
-
-                                            const wA = getStatVal(a.stats, 'wins');
-                                            const wB = getStatVal(b.stats, 'wins');
-                                            return wB - wA;
-                                        });
-
-                                        const divName = node.name || 'Division';
-                                        html += `
-                                            <div class="sb-card" style="padding: 14px; margin-bottom: 0; background: var(--bg-body);">
-                                                <div style="font-size: 0.9em; font-weight: 700; color: var(--accent-primary); margin-bottom: 10px; padding-bottom: 4px; border-bottom: 1px solid var(--border-color);">${divName}</div>
-                                                <div style="display: flex; flex-direction: column; gap: 6px;">
-                                        `;
-
-                                        sortedEntries.forEach((entry) => {
-                                            const teamName = entry.team?.displayName || entry.team?.shortDisplayName || '';
-                                            const logo = entry.team?.logo || entry.team?.logos?.[0]?.href || '';
-                                            const stats = entry.stats || [];
-                                            const getStat = (stName) => stats.find(s => s.name === stName)?.displayValue || '';
-                                            const record = getStat('overall') || `${getStat('wins')}-${getStat('losses')}`;
-
-                                            html += `
-                                                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 0.9em; padding: 3px 0; color: var(--text-secondary);">
-                                                    <div style="display: flex; align-items: center; gap: 8px; min-width: 0;">
-                                                        ${logo ? `<img src="${logo}" alt="" style="width: 18px; height: 18px; object-fit: contain; flex-shrink: 0;">` : ''}
-                                                        <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; color: var(--text-primary);">${teamName}</span>
-                                                    </div>
-                                                    <span style="font-variant-numeric: tabular-nums; font-weight: 600; margin-left: 12px; flex-shrink: 0;">${record}</span>
-                                                </div>
-                                            `;
-                                        });
-
-                                        html += `</div></div>`;
-                                    }
-
-                                    subGroups.forEach(sub => renderDivisions(sub));
-                                };
-
-                                if (confChildren.length > 0) {
-                                    confChildren.forEach(child => renderDivisions(child));
-                                } else {
-                                    renderDivisions(confNode);
-                                }
-
-                                html += `</div></div>`;
-                            });
-
-                            html += `</div>`;
+                        if (!renderedAnyDivision) {
+                            console.info(`No standings entries returned for ${name} from ${url}. Keys:`, Object.keys(data || {}));
+                            html += `<p class="scoreboard-empty">Standings data not returned by this endpoint for ${name}. <a href="${espnUrl}" target="_blank" rel="noopener" style="color: var(--accent-primary);">View ${name} Standings on ESPN ↗</a></p>`;
+                        } else {
+                            html += standingsHtml;
                         }
                     }
 
