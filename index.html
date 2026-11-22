@@ -551,7 +551,7 @@
 
                 results.forEach((result) => {
                     if (result.status !== 'fulfilled') return;
-                    const { name, data, mode } = result.value;
+                    const { name, data, viewMode: mode } = result.value;
 
                     html += `<section class="scoreboard-league">`;
                     html += `<h2 class="scoreboard-league-title">${name}</h2>`;
