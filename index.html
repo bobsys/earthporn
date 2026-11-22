@@ -451,7 +451,7 @@
 
         //#####
 
-        let scoreboardRenderToken = 0;
+let scoreboardRenderToken = 0;
 
         function getLocalDateStart(dateObj = new Date()) {
             return new Date(dateObj.getFullYear(), dateObj.getMonth(), dateObj.getDate());
@@ -485,22 +485,18 @@
         function collectStandingsGroups(data) {
             if (!data || typeof data !== 'object') return [];
 
-            // Case 1: Top-level children (e.g., conferences -> divisions -> standings.entries)
             if (Array.isArray(data.children) && data.children.length > 0) {
                 return data.children;
             }
 
-            // Case 2: data.standings is an array of groups
             if (Array.isArray(data.standings) && data.standings.length > 0) {
                 return data.standings;
             }
 
-            // Case 3: data.standings is an object with entries directly
             if (data.standings && Array.isArray(data.standings.entries) && data.standings.entries.length > 0) {
                 return [{ name: data.name || 'League Standings', standings: data.standings }];
             }
 
-            // Case 4: Top-level entries directly
             if (Array.isArray(data.entries) && data.entries.length > 0) {
                 return [{ name: data.name || 'League Standings', entries: data.entries }];
             }
@@ -563,7 +559,7 @@
                     leagues.map(async (lg) => {
                         const url = viewMode === 'scores'
                             ? `https://site.api.espn.com/apis/site/v2/sports/${lg.sport}/${lg.league}/scoreboard?dates=${dateParam}`
-                            : `https://site.api.espn.com/apis/site/v2/sports/${lg.sport}/${lg.league}/standings?level=3`;
+                            : `https://site.web.api.espn.com/apis/v2/sports/${lg.sport}/${lg.league}/standings?level=3`;
                         const res = await fetch(url);
                         if (!res.ok) throw new Error(`${lg.name} HTTP ${res.status}`);
                         const data = await res.json();
@@ -729,8 +725,7 @@
                         standingsHtml += `</div>`;
 
                         if (!renderedAnyDivision) {
-                            console.info(`No standings entries returned for ${name} from ${url}. Keys:`, Object.keys(data || {}));
-                            html += `<p class="scoreboard-empty">Standings data not returned by this endpoint for ${name}. <a href="${espnUrl}" target="_blank" rel="noopener" style="color: var(--accent-primary);">View ${name} Standings on ESPN ↗</a></p>`;
+                            html += `<p class="scoreboard-empty">Standings data not returned for ${name}. <a href="${espnUrl}" target="_blank" rel="noopener" style="color: var(--accent-primary);">View ${name} Standings on ESPN ↗</a></p>`;
                         } else {
                             html += standingsHtml;
                         }
@@ -759,7 +754,7 @@
                 console.error('Failed to load sports data:', err);
                 sectionsEl.innerHTML = `<p class="scoreboard-empty">Unable to load sports data right now.</p>`;
             }
-        }
+        }        
 
         //#####
 
