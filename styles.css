@@ -412,6 +412,12 @@ h1#feed-title {
     border-radius: 999px;
     border: 1px solid var(--border-color);
     width: fit-content;
+    cursor: pointer;
+    transition: border-color 0.2s ease, transform 0.15s ease;
+}
+
+h1#feed-title:hover {
+    border-color: var(--accent-primary);
 }
 
 .input-group {

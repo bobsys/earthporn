@@ -128,7 +128,7 @@
 
     (function() {
         // --- APPLICATION VERSION ---
-        const APP_VERSION = "11222026";
+        const APP_VERSION = "11232026";
 
         // --- STATE MANAGEMENT ---
         let prefetchedFeeds = new Set();
@@ -1190,6 +1190,17 @@ let scoreboardRenderToken = 0;
                 }
             }
         };
+
+        feedTitle.addEventListener('click', () => {
+            const rawUrl = (currentFetchUrl || rssInput.value || '').trim();
+            if (!rawUrl || rawUrl.includes('://') && !/^https?:/i.test(rawUrl)) {
+                return;
+            }
+
+            const cleanUrl = rawUrl.replace(/#scrape$/, '');
+            const targetUrl = new URL(cleanUrl, window.location.href).href;
+            window.open(targetUrl, '_blank', 'noopener');
+        });
 
         function getConfigStorageKey(isPrivate) {
             return isPrivate ? 'bobs_stuff_private_links' : 'bobs_stuff_public_links';
