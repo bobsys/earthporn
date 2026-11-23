@@ -147,6 +147,8 @@
         let currentFeedTitle = '';
         let currentOpenInNewTab = false;
         let currentDefaultReaderMode = false;
+        let savedFeedScrollTop = 0;
+        let savedWindowScrollY = 0;
 
         const MAX_RETRY_ATTEMPTS = 2;
         const INITIAL_RETRY_DELAY_MS = 1000;
@@ -545,6 +547,7 @@ let scoreboardRenderToken = 0;
             document.getElementById('prev-day-btn').onclick = () => shiftDay(-1);
             document.getElementById('next-day-btn').onclick = () => shiftDay(1);
             document.getElementById('today-date-btn').onclick = () => {
+                showToast("Jumped back to today's slate.", 2000);
                 renderSportsScoreboard(container, viewMode, getLocalDateStart());
             };
             document.getElementById('toggle-view-btn').onclick = () => {
@@ -910,7 +913,7 @@ function showToast(message, durationMs = 4000) {
                 setTimeout(() => toast.remove(), 300);
             }, durationMs);
         }
-        
+
         async function loadReaderMode(articleUrl, fallbackTitle, onFallback = null) {
             const readerBtn = document.getElementById('reader-view-btn');
             if (readerBtn) {
@@ -988,7 +991,11 @@ function showToast(message, durationMs = 4000) {
             if (inputGroup) inputGroup.style.display = 'flex';
         }
 
-        function openArticleInRightPanel(articleUrl, articleTitle) {
+function openArticleInRightPanel(articleUrl, articleTitle) {
+            const mainContentEl = document.querySelector('.main-content');
+            savedFeedScrollTop = mainContentEl ? mainContentEl.scrollTop : 0;
+            savedWindowScrollY = window.scrollY || window.pageYOffset || 0;
+
             const articleHeader = document.getElementById('article-header-bar');
             const inputGroup = document.querySelector('.input-group');
             const backBtn = document.getElementById('back-to-feed-btn');
@@ -1019,7 +1026,13 @@ function showToast(message, durationMs = 4000) {
                     exitArticleView();
                     feedTitle.textContent = labelTitle;
                     renderFeedItems(currentFeedItems, feedContainer, currentOpenInNewTab);
-                    scrollToTop();
+                    requestAnimationFrame(() => {
+                        const contentEl = document.querySelector('.main-content');
+                        if (contentEl) {
+                            contentEl.scrollTop = savedFeedScrollTop;
+                        }
+                        window.scrollTo(0, savedWindowScrollY);
+                    });
                 };
             }
 
@@ -1049,7 +1062,7 @@ function showToast(message, durationMs = 4000) {
                 showIframe();
             }
         }
-
+        
         //########
 
         function renderFeedItems(items, feedContainer, openInNewTab = false) {
