@@ -867,7 +867,7 @@ let scoreboardRenderToken = 0;
             }
         }
 
-        function showToast(message, durationMs = 4000) {
+function showToast(message, durationMs = 4000) {
             const existing = document.getElementById('app-toast');
             if (existing) existing.remove();
 
@@ -877,19 +877,21 @@ let scoreboardRenderToken = 0;
 
             Object.assign(toast.style, {
                 position: 'fixed',
-                bottom: '24px',
-                right: '24px',
+                top: '50%',
+                left: '50%',
                 zIndex: '99999',
                 backgroundColor: 'var(--bg-card, #282c34)',
                 color: 'var(--accent-title, #f5c542)',
                 border: '2px solid var(--accent-primary, #4dabf7)',
-                padding: '14px 20px',
+                padding: '14px 22px',
                 borderRadius: '8px',
                 boxShadow: '0 8px 24px rgba(0, 0, 0, 0.6)',
                 fontSize: '0.95em',
                 fontWeight: '600',
+                maxWidth: 'min(90vw, 480px)',
+                textAlign: 'center',
                 opacity: '0',
-                transform: 'translateY(12px)',
+                transform: 'translate(-50%, calc(-50% + 12px))',
                 transition: 'opacity 0.25s ease, transform 0.25s ease',
                 pointerEvents: 'none'
             });
@@ -900,15 +902,15 @@ let scoreboardRenderToken = 0;
             void toast.offsetWidth;
 
             toast.style.opacity = '1';
-            toast.style.transform = 'translateY(0)';
+            toast.style.transform = 'translate(-50%, -50%)';
 
             setTimeout(() => {
                 toast.style.opacity = '0';
-                toast.style.transform = 'translateY(12px)';
+                toast.style.transform = 'translate(-50%, calc(-50% + 12px))';
                 setTimeout(() => toast.remove(), 300);
             }, durationMs);
         }
-
+        
         async function loadReaderMode(articleUrl, fallbackTitle, onFallback = null) {
             const readerBtn = document.getElementById('reader-view-btn');
             if (readerBtn) {
